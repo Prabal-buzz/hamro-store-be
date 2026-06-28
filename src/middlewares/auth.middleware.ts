@@ -27,3 +27,15 @@ export const authMiddleware = (
     return next(new AppError('Invalid or expired token.', 401));
   }
 };
+
+export const adminMiddleware = (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  if (req.user?.role !== 'admin') {
+    return next(new AppError('Admin access required.', 403));
+  }
+  next();
+};
+
