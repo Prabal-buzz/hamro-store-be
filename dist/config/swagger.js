@@ -1,6 +1,9 @@
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 import { env } from './env.js';
+const serverUrl = env.NODE_ENV === 'production'
+    ? 'https://hamro-store-be.onrender.com/api/v1'
+    : `http://localhost:${env.PORT}/api/v1`;
 const options = {
     definition: {
         openapi: '3.0.0',
@@ -11,8 +14,8 @@ const options = {
         },
         servers: [
             {
-                url: `http://localhost:${env.PORT}/api/v1`,
-                description: 'Development server',
+                url: serverUrl,
+                description: env.NODE_ENV === 'production' ? 'Production server' : 'Development server',
             },
         ],
         components: {
@@ -25,10 +28,10 @@ const options = {
             },
         },
     },
-    apis: ['./src/routes/*.ts', './dist/routes/*.js'],
+    apis: env.NODE_ENV === 'production' ? ['./dist/routes/*.js'] : ['./src/routes/*.ts'],
 };
 const swaggerSpec = swaggerJsdoc(options);
 export const setupSwagger = (app) => {
     app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-    console.log(`📝 Swagger Docs available at http://localhost:${env.PORT}/docs`);
+    console.log(`📝 Swagger Docs available at ${serverUrl.replace('/api/v1', '')}/docs`);
 };
