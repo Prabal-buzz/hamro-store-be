@@ -1,8 +1,8 @@
 # Dependency directories
 node_modules/
 
-# Build directory
-dist/
+# Build directory (commented out for deployment - dist needs to be built during deploy)
+# dist/
 
 # Environment variables
 .env
