@@ -1,7 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { z } from 'zod';
-import { authMiddleware } from '../middlewares/auth.middleware.js';
-import { adminMiddleware } from '../middlewares/auth.middleware.js';
+import { authMiddleware, adminMiddleware } from '../middlewares/auth.middleware.js';
 import {
   getAllTransactions,
   getTransactionsByCustomerId,
@@ -10,52 +8,22 @@ import {
 
 const router = Router();
 
-// GET /transactions - Get all transactions (admin only)
-router.get('/', authMiddleware, adminMiddleware, (req: Request, res: Response) => {
+router.get('/', authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
   try {
-    const transactions = getAllTransactions();
-    res.json({
-      success: true,
-      data: { transactions },
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch transactions',
-    });
-  }
+    res.json({ success: true, data: { transactions: await getAllTransactions() } });
+  } catch { res.status(500).json({ success: false, message: 'Failed to fetch transactions' }); }
 });
 
-// GET /transactions/customer/:customerId - Get transactions by customer ID
-router.get('/customer/:customerId', authMiddleware, (req: Request, res: Response) => {
+router.get('/customer/:customerId', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const transactions = getTransactionsByCustomerId(req.params.customerId);
-    res.json({
-      success: true,
-      data: { transactions },
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch transactions',
-    });
-  }
+    res.json({ success: true, data: { transactions: await getTransactionsByCustomerId(req.params.customerId) } });
+  } catch { res.status(500).json({ success: false, message: 'Failed to fetch transactions' }); }
 });
 
-// GET /transactions/vendor/:vendorId - Get transactions by vendor ID
-router.get('/vendor/:vendorId', authMiddleware, (req: Request, res: Response) => {
+router.get('/vendor/:vendorId', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const transactions = getTransactionsByVendorId(req.params.vendorId);
-    res.json({
-      success: true,
-      data: { transactions },
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch transactions',
-    });
-  }
+    res.json({ success: true, data: { transactions: await getTransactionsByVendorId(req.params.vendorId) } });
+  } catch { res.status(500).json({ success: false, message: 'Failed to fetch transactions' }); }
 });
 
 export default router;

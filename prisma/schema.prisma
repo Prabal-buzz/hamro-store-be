@@ -1,0 +1,195 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  admin
+  customer
+  vendor
+}
+
+enum UserStatus {
+  active
+  inactive
+  suspended
+  pending
+}
+
+enum VendorCategory {
+  Vegetables_and_Fruits @map("Vegetables and Fruits")
+  Non_Veg               @map("Non Veg")
+  Grocery
+  Spices
+  Beverages
+}
+
+enum OrderStatus {
+  pending
+  partial
+  completed
+  cancelled
+}
+
+enum OrderItemStatus {
+  pending
+  accepted
+  rejected
+  completed
+}
+
+enum TransactionStatus {
+  pending
+  completed
+  failed
+}
+
+enum NotificationStatus {
+  pending
+  accepted
+  rejected
+  completed
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
+model User {
+  id           String         @id @default(cuid())
+  email        String         @unique
+  passwordHash String
+  role         UserRole
+  name         String
+  dashboardUrl String
+  status       UserStatus     @default(active)
+  category     VendorCategory?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  orders        Order[]
+  orderItems    OrderItem[]
+  transactions  Transaction[]
+  notifications Notification[]
+  cartItems     CartItem[]
+  products      VendorProduct[]
+
+  @@map("users")
+}
+
+model Order {
+  id                String         @id @default(cuid())
+  customerId        String
+  productType       VendorCategory
+  productName       String
+  totalQuantity     Float
+  unit              String
+  status            OrderStatus    @default(pending)
+  fulfilledQuantity Float          @default(0)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  customer      User           @relation(fields: [customerId], references: [id])
+  items         OrderItem[]
+  transactions  Transaction[]
+  notifications Notification[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id           String          @id @default(cuid())
+  orderId      String
+  vendorId     String
+  quantity     Float
+  pricePerUnit Float
+  totalPrice   Float
+  status       OrderItemStatus @default(accepted)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  order        Order         @relation(fields: [orderId], references: [id])
+  vendor       User          @relation(fields: [vendorId], references: [id])
+  transactions Transaction[]
+
+  @@map("order_items")
+}
+
+model Transaction {
+  id           String            @id @default(cuid())
+  orderItemId  String
+  orderId      String
+  customerId   String
+  vendorId     String
+  quantity     Float
+  pricePerUnit Float
+  totalPrice   Float
+  status       TransactionStatus @default(pending)
+  createdAt    DateTime          @default(now())
+  completedAt  DateTime?
+
+  orderItem OrderItem @relation(fields: [orderItemId], references: [id])
+  order     Order     @relation(fields: [orderId], references: [id])
+  customer  User      @relation(fields: [customerId], references: [id])
+
+  @@map("transactions")
+}
+
+model Notification {
+  id            String             @id @default(cuid())
+  vendorId      String
+  orderId       String
+  customerId    String
+  productName   String
+  productType   VendorCategory
+  totalQuantity Float
+  unit          String
+  status        NotificationStatus @default(pending)
+  read          Boolean            @default(false)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  vendor User  @relation(fields: [vendorId], references: [id])
+  order  Order @relation(fields: [orderId], references: [id])
+
+  @@map("notifications")
+}
+
+model CartItem {
+  id           String         @id @default(cuid())
+  customerId   String
+  productName  String
+  productType  VendorCategory
+  unit         String
+  quantity     Float
+  pricePerUnit Float
+  totalPrice   Float
+  imageUrl     String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  customer User @relation(fields: [customerId], references: [id])
+
+  @@map("cart_items")
+}
+
+model VendorProduct {
+  id           String         @id @default(cuid())
+  vendorId     String
+  productName  String
+  productType  VendorCategory
+  unit         String
+  quantity     Float
+  pricePerUnit Float
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  vendor User @relation(fields: [vendorId], references: [id])
+
+  @@unique([vendorId, productName])
+  @@map("vendor_products")
+}

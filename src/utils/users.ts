@@ -1,49 +1,78 @@
-import bcrypt from 'bcryptjs';
-import { UserRole } from '../types/auth.js';
+import { prisma } from '../lib/prisma.js';
+import { VendorCategory } from '../types/auth.js';
 
-export interface User {
+// User type matching the Prisma schema shape
+export type User = {
   id: string;
   email: string;
   passwordHash: string;
-  role: UserRole;
+  role: 'admin' | 'customer' | 'vendor';
   name: string;
   dashboardUrl: string;
-  status: 'active' | 'inactive' | 'suspended';
-  createdAt: string;
+  status: 'active' | 'inactive' | 'suspended' | 'pending';
+  category?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export async function findUserByEmail(email: string) {
+  return prisma.user.findUnique({ where: { email } });
 }
 
-// Pre-generate the password hash synchronously during initialization
-const defaultPasswordHash = bcrypt.hashSync('password123', 10);
+export async function findUserById(id: string) {
+  return prisma.user.findUnique({ where: { id } });
+}
 
-export const seedUsers: User[] = [
-  {
-    id: 'user-admin-1',
-    email: 'admin@hamrostore.com',
-    passwordHash: defaultPasswordHash,
-    role: 'admin',
-    name: 'Admin User',
-    dashboardUrl: '/admin/dashboard',
-    status: 'active',
-    createdAt: new Date('2024-01-01').toISOString(),
-  },
-  {
-    id: 'user-customer-1',
-    email: 'customer@hamrostore.com',
-    passwordHash: defaultPasswordHash,
-    role: 'customer',
-    name: 'Customer User',
-    dashboardUrl: '/customer/dashboard',
-    status: 'active',
-    createdAt: new Date('2024-02-15').toISOString(),
-  },
-  {
-    id: 'user-vendor-1',
-    email: 'vendor@hamrostore.com',
-    passwordHash: defaultPasswordHash,
-    role: 'vendor',
-    name: 'Vendor User',
-    dashboardUrl: '/vendor/dashboard',
-    status: 'active',
-    createdAt: new Date('2024-03-10').toISOString(),
-  },
-];
+export async function getAllUsers() {
+  return prisma.user.findMany({ orderBy: { createdAt: 'asc' } });
+}
+
+export async function createUser(data: {
+  email: string;
+  passwordHash: string;
+  role: 'admin' | 'customer' | 'vendor';
+  name: string;
+  dashboardUrl: string;
+  category?: VendorCategory;
+}) {
+  return prisma.user.create({
+    data: {
+      email: data.email,
+      passwordHash: data.passwordHash,
+      role: data.role,
+      name: data.name,
+      dashboardUrl: data.dashboardUrl,
+      category: data.category ? categoryToEnum(data.category) : undefined,
+      status: 'active',
+    },
+  });
+}
+
+export async function updateUser(id: string, data: Partial<{
+  email: string;
+  name: string;
+  status: 'active' | 'inactive' | 'suspended' | 'pending';
+  category: VendorCategory;
+  passwordHash: string;
+}>) {
+  return prisma.user.update({
+    where: { id },
+    data: {
+      ...data,
+      category: data.category ? categoryToEnum(data.category) : undefined,
+    },
+  });
+}
+
+export async function deleteUser(id: string) {
+  return prisma.user.delete({ where: { id } });
+}
+
+// Prisma stores enum keys like "Non_Veg"; the app uses "Non Veg" strings.
+export function categoryToEnum(cat: VendorCategory) {
+  return cat.replace(/ /g, '_') as any;
+}
+
+export function enumToCategory(val: string): VendorCategory {
+  return val.replace(/_/g, ' ') as VendorCategory;
+}
