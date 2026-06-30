@@ -32,7 +32,7 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
     const items = await getCart(customerId);
     const subtotal = items.reduce((sum: number, i: any) => sum + i.totalPrice, 0);
     res.json({ success: true, data: { items, subtotal, count: items.length } });
-  } catch { res.status(500).json({ success: false, message: 'Failed to fetch cart' }); }
+  } catch (err) { console.error('GET /cart error:', err); res.status(500).json({ success: false, message: 'Failed to fetch cart' }); }
 });
 
 router.post('/items', authMiddleware, async (req: Request, res: Response) => {
@@ -44,7 +44,7 @@ router.post('/items', authMiddleware, async (req: Request, res: Response) => {
     res.status(201).json({ success: true, data: { item } });
   } catch (err) {
     if (err instanceof z.ZodError) return res.status(400).json({ success: false, message: 'Validation error', errors: err.errors });
-    res.status(500).json({ success: false, message: 'Failed to add item to cart' });
+    console.error('POST /cart/items error:', err); res.status(500).json({ success: false, message: 'Failed to add item to cart' });
   }
 });
 
