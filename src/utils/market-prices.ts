@@ -3,7 +3,8 @@ import { VendorCategory } from '../types/auth.js';
 
 // ─── Kalimati API ─────────────────────────────────────────────────────────────
 
-const KALIMATI_URL = 'https://kalimatimarket.gov.np/api/daily-prices/en';
+const KALIMATI_EN_URL = 'https://kalimatimarket.gov.np/api/daily-prices/en';
+const KALIMATI_NP_URL = 'https://kalimatimarket.gov.np/api/daily-prices/np';
 
 /** In-memory cache for the Kalimati response (refreshes daily) */
 let kalimatiCache: { prices: MarketPrice[]; date: string; fetchedAt: number } | null = null;
@@ -95,13 +96,31 @@ async function fetchKalimatiPrices(): Promise<MarketPrice[]> {
     return kalimatiCache.prices;
   }
 
-  const res = await fetch(KALIMATI_URL);
-  if (!res.ok) throw new Error(`Kalimati API error: ${res.status}`);
-  const json: KalimatiApiResponse = await res.json() as KalimatiApiResponse;
+  // Fetch English and Nepali APIs in parallel; Nepali is best-effort
+  const [enRes, npRes] = await Promise.allSettled([
+    fetch(KALIMATI_EN_URL),
+    fetch(KALIMATI_NP_URL),
+  ]);
 
-  const prices: MarketPrice[] = json.prices.map((item, idx) => ({
+  if (enRes.status === 'rejected' || !enRes.value.ok) {
+    throw new Error(`Kalimati EN API error`);
+  }
+
+  const enJson: KalimatiApiResponse = await enRes.value.json() as KalimatiApiResponse;
+
+  // Build a map of index → Nepali name (same ordering as EN API)
+  const npNameByIndex = new Map<number, string>();
+  if (npRes.status === 'fulfilled' && npRes.value.ok) {
+    const npJson: KalimatiApiResponse = await npRes.value.json() as KalimatiApiResponse;
+    npJson.prices.forEach((item, idx) => {
+      npNameByIndex.set(idx, item.commodityname);
+    });
+  }
+
+  const prices: MarketPrice[] = enJson.prices.map((item, idx) => ({
     id: `kal-${idx}`,
     name: item.commodityname,
+    nameNp: npNameByIndex.get(idx),
     unit: item.commodityunit,
     minPrice: parseFloat(item.minprice),
     maxPrice: parseFloat(item.maxprice),
@@ -109,10 +128,10 @@ async function fetchKalimatiPrices(): Promise<MarketPrice[]> {
     category: 'Vegetables and Fruits',
     imageUrl: imageForCommodity(item.commodityname, 'Vegetables and Fruits'),
     source: 'kalimati',
-    date: json.date,
+    date: enJson.date,
   }));
 
-  kalimatiCache = { prices, date: json.date, fetchedAt: now };
+  kalimatiCache = { prices, date: enJson.date, fetchedAt: now };
   return prices;
 }
 
