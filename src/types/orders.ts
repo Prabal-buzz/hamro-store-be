@@ -1,8 +1,14 @@
+import { VendorCategory } from './auth.js';
+
+export type { VendorCategory };
+
 export interface Order {
   id: string;
   customerId: string;
-  meatType: string;
-  totalQuantity: number; // in kg
+  /** Must be one of the 5 vendor categories */
+  productType: VendorCategory;
+  productName: string; // e.g., "Tomatoes", "Buffalo Meat", etc.
+  totalQuantity: number;
   unit: string;
   status: "pending" | "partial" | "completed" | "cancelled";
   fulfilledQuantity: number;
@@ -37,7 +43,8 @@ export interface Transaction {
 }
 
 export interface CreateOrderInput {
-  meatType: string;
+  productType: VendorCategory;
+  productName: string;
   totalQuantity: number;
   unit: string;
 }
@@ -51,4 +58,19 @@ export interface CreateOrderItemInput {
 
 export interface UpdateOrderItemStatusInput {
   status: "accepted" | "rejected" | "completed";
+}
+
+export interface Notification {
+  id: string;
+  vendorId: string;
+  orderId: string;
+  customerId: string;
+  productName: string;
+  productType: VendorCategory;
+  totalQuantity: number;
+  unit: string;
+  status: "pending" | "accepted" | "rejected" | "completed";
+  read: boolean;
+  createdAt: string;
+  updatedAt: string;
 }

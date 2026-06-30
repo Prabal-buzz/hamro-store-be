@@ -1,200 +1,294 @@
-import { Order, OrderItem, Transaction } from "../types/orders.js";
+import { prisma } from '../lib/prisma.js';
+import { categoryToEnum } from './users.js';
+import { addOrUpdateVendorProduct } from './products.js';
+import { VendorCategory } from '../types/auth.js';
 
-// Seed orders
-export const seedOrders: Order[] = [
-  {
-    id: "order-1",
-    customerId: "user-1",
-    meatType: "Buffalo Meat",
-    totalQuantity: 30,
-    unit: "kg",
-    status: "pending",
-    fulfilledQuantity: 0,
-    createdAt: new Date("2024-01-15").toISOString(),
-    updatedAt: new Date("2024-01-15").toISOString(),
-  },
-  {
-    id: "order-2",
-    customerId: "user-2",
-    meatType: "Goat Meat",
-    totalQuantity: 15,
-    unit: "kg",
-    status: "partial",
-    fulfilledQuantity: 10,
-    createdAt: new Date("2024-01-16").toISOString(),
-    updatedAt: new Date("2024-01-16").toISOString(),
-  },
-];
+// ─── Orders ───────────────────────────────────────────────────────────────────
 
-// Seed order items
-export const seedOrderItems: OrderItem[] = [
-  {
-    id: "order-item-1",
-    orderId: "order-1",
-    vendorId: "user-3",
-    quantity: 10,
-    pricePerUnit: 500,
-    totalPrice: 5000,
-    status: "accepted",
-    createdAt: new Date("2024-01-15").toISOString(),
-    updatedAt: new Date("2024-01-15").toISOString(),
-  },
-  {
-    id: "order-item-2",
-    orderId: "order-1",
-    vendorId: "user-4",
-    quantity: 15,
-    pricePerUnit: 480,
-    totalPrice: 7200,
-    status: "pending",
-    createdAt: new Date("2024-01-15").toISOString(),
-    updatedAt: new Date("2024-01-15").toISOString(),
-  },
-  {
-    id: "order-item-3",
-    orderId: "order-2",
-    vendorId: "user-3",
-    quantity: 10,
-    pricePerUnit: 600,
-    totalPrice: 6000,
-    status: "completed",
-    createdAt: new Date("2024-01-16").toISOString(),
-    updatedAt: new Date("2024-01-16").toISOString(),
-  },
-];
-
-// Seed transactions
-export const seedTransactions: Transaction[] = [
-  {
-    id: "trans-1",
-    orderItemId: "order-item-3",
-    orderId: "order-2",
-    customerId: "user-2",
-    vendorId: "user-3",
-    quantity: 10,
-    pricePerUnit: 600,
-    totalPrice: 6000,
-    status: "completed",
-    createdAt: new Date("2024-01-16").toISOString(),
-    completedAt: new Date("2024-01-16").toISOString(),
-  },
-];
-
-// In-memory storage
-let orders: Order[] = [...seedOrders];
-let orderItems: OrderItem[] = [...seedOrderItems];
-let transactions: Transaction[] = [...seedTransactions];
-
-export function getAllOrders(): Order[] {
-  return orders;
+export async function getAllOrders() {
+  return prisma.order.findMany({ orderBy: { createdAt: 'desc' } });
 }
 
-export function getOrderById(id: string): Order | undefined {
-  return orders.find((o) => o.id === id);
+export async function getOrderById(id: string) {
+  return prisma.order.findUnique({ where: { id } });
 }
 
-export function getOrdersByCustomerId(customerId: string): Order[] {
-  return orders.filter((o) => o.customerId === customerId);
+export async function getOrdersByCustomerId(customerId: string) {
+  return prisma.order.findMany({ where: { customerId }, orderBy: { createdAt: 'desc' } });
 }
 
-export function getOrdersByVendorId(vendorId: string): OrderItem[] {
-  return orderItems.filter((oi) => oi.vendorId === vendorId);
+export async function createOrder(data: {
+  customerId: string;
+  productType: VendorCategory;
+  productName: string;
+  totalQuantity: number;
+  unit: string;
+}) {
+  return prisma.order.create({
+    data: {
+      customerId: data.customerId,
+      productType: categoryToEnum(data.productType),
+      productName: data.productName,
+      totalQuantity: data.totalQuantity,
+      unit: data.unit,
+      status: 'pending',
+      fulfilledQuantity: 0,
+    },
+  });
 }
 
-export function createOrder(data: Omit<Order, "id" | "status" | "fulfilledQuantity" | "createdAt" | "updatedAt">): Order {
-  const newOrder: Order = {
-    ...data,
-    id: `order-${orders.length + 1}`,
-    status: "pending",
-    fulfilledQuantity: 0,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
-  orders.push(newOrder);
-  return newOrder;
+// ─── Order Items ──────────────────────────────────────────────────────────────
+
+export async function getAllOrderItems() {
+  return prisma.orderItem.findMany({ orderBy: { createdAt: 'desc' } });
 }
 
-export function createOrderItem(data: Omit<OrderItem, "id" | "status" | "createdAt" | "updatedAt">): OrderItem {
-  const newOrderItem: OrderItem = {
-    ...data,
-    id: `order-item-${orderItems.length + 1}`,
-    status: "pending",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
-  orderItems.push(newOrderItem);
-  
-  // Update order fulfilled quantity
-  const order = orders.find((o) => o.id === data.orderId);
-  if (order) {
-    const acceptedItems = orderItems.filter((oi) => oi.orderId === data.orderId && oi.status === "accepted");
-    order.fulfilledQuantity = acceptedItems.reduce((sum, oi) => sum + oi.quantity, 0);
-    
-    // Update order status
-    if (order.fulfilledQuantity >= order.totalQuantity) {
-      order.status = "completed";
-    } else if (order.fulfilledQuantity > 0) {
-      order.status = "partial";
+export async function getOrderItemById(id: string) {
+  return prisma.orderItem.findUnique({ where: { id } });
+}
+
+export async function getOrderItemsByOrderId(orderId: string) {
+  return prisma.orderItem.findMany({ where: { orderId } });
+}
+
+export async function getOrdersByVendorId(vendorId: string) {
+  return prisma.orderItem.findMany({ where: { vendorId }, orderBy: { createdAt: 'desc' } });
+}
+
+export async function createOrderItem(data: {
+  orderId: string;
+  vendorId: string;
+  quantity: number;
+  pricePerUnit: number;
+  totalPrice: number;
+}) {
+  // Run in a transaction: create item + update order fulfilled qty + update product inventory
+  return prisma.$transaction(async (tx: any) => {
+    const order = await tx.order.findUniqueOrThrow({ where: { id: data.orderId } });
+
+    const newItem = await tx.orderItem.create({
+      data: {
+        orderId: data.orderId,
+        vendorId: data.vendorId,
+        quantity: data.quantity,
+        pricePerUnit: data.pricePerUnit,
+        totalPrice: data.totalPrice,
+        status: 'accepted',
+      },
+    });
+
+    // Recompute fulfilledQuantity from all accepted items
+    const accepted = await tx.orderItem.aggregate({
+      where: { orderId: data.orderId, status: 'accepted' },
+      _sum: { quantity: true },
+    });
+    const fulfilled = accepted._sum.quantity ?? 0;
+    const newStatus =
+      fulfilled >= order.totalQuantity ? 'completed'
+      : fulfilled > 0 ? 'partial'
+      : 'pending';
+
+    await tx.order.update({
+      where: { id: data.orderId },
+      data: { fulfilledQuantity: fulfilled, status: newStatus },
+    });
+
+    return newItem;
+  }).then(async (newItem: any) => {
+    // Update vendor product inventory outside the transaction (non-critical)
+    const order = await prisma.order.findUnique({ where: { id: data.orderId } });
+    if (order) {
+      await addOrUpdateVendorProduct({
+        vendorId: data.vendorId,
+        productName: order.productName,
+        productType: order.productType as unknown as VendorCategory,
+        unit: order.unit,
+        quantity: data.quantity,
+        pricePerUnit: data.pricePerUnit,
+      });
     }
-    order.updatedAt = new Date().toISOString();
-  }
-  
-  return newOrderItem;
+    return newItem;
+  });
 }
 
-export function updateOrderItemStatus(id: string, status: "accepted" | "rejected" | "completed"): OrderItem | undefined {
-  const orderItem = orderItems.find((oi) => oi.id === id);
-  if (!orderItem) return undefined;
-  
-  orderItem.status = status;
-  orderItem.updatedAt = new Date().toISOString();
-  
-  // Update order fulfilled quantity
-  const order = orders.find((o) => o.id === orderItem.orderId);
-  if (order) {
-    const acceptedItems = orderItems.filter((oi) => oi.orderId === orderItem.orderId && oi.status === "accepted");
-    order.fulfilledQuantity = acceptedItems.reduce((sum, oi) => sum + oi.quantity, 0);
-    
-    // Update order status
-    if (order.fulfilledQuantity >= order.totalQuantity) {
-      order.status = "completed";
-    } else if (order.fulfilledQuantity > 0) {
-      order.status = "partial";
-    } else {
-      order.status = "pending";
+export async function updateOrderItemStatus(
+  id: string,
+  status: 'accepted' | 'rejected' | 'completed'
+) {
+  return prisma.$transaction(async (tx: any) => {
+    const item = await tx.orderItem.update({
+      where: { id },
+      data: { status },
+    });
+
+    // Recompute order fulfilled qty
+    const accepted = await tx.orderItem.aggregate({
+      where: { orderId: item.orderId, status: 'accepted' },
+      _sum: { quantity: true },
+    });
+    const fulfilled = accepted._sum.quantity ?? 0;
+
+    const order = await tx.order.findUniqueOrThrow({ where: { id: item.orderId } });
+    const newStatus =
+      fulfilled >= order.totalQuantity ? 'completed'
+      : fulfilled > 0 ? 'partial'
+      : 'pending';
+
+    await tx.order.update({
+      where: { id: item.orderId },
+      data: { fulfilledQuantity: fulfilled, status: newStatus },
+    });
+
+    // Create transaction record on completion
+    if (status === 'completed') {
+      await tx.transaction.create({
+        data: {
+          orderItemId: item.id,
+          orderId: item.orderId,
+          customerId: order.customerId,
+          vendorId: item.vendorId,
+          quantity: item.quantity,
+          pricePerUnit: item.pricePerUnit,
+          totalPrice: item.totalPrice,
+          status: 'completed',
+          completedAt: new Date(),
+        },
+      });
     }
-    order.updatedAt = new Date().toISOString();
+
+    return item;
+  });
+}
+
+export async function increaseOrderItemQuantity(
+  id: string,
+  additionalQuantity: number,
+  requestingVendorId: string
+): Promise<{ success: true; orderItem: any } | { success: false; message: string }> {
+  const orderItem = await prisma.orderItem.findUnique({ where: { id } });
+  if (!orderItem) return { success: false, message: 'Order item not found' };
+  if (orderItem.vendorId !== requestingVendorId) {
+    return { success: false, message: 'This order item does not belong to you.' };
   }
-  
-  // Create transaction if completed
-  if (status === "completed" && order) {
-    const newTransaction: Transaction = {
-      id: `trans-${transactions.length + 1}`,
-      orderItemId: orderItem.id,
-      orderId: orderItem.orderId,
-      customerId: order.customerId,
-      vendorId: orderItem.vendorId,
-      quantity: orderItem.quantity,
-      pricePerUnit: orderItem.pricePerUnit,
-      totalPrice: orderItem.totalPrice,
-      status: "completed",
-      createdAt: new Date().toISOString(),
-      completedAt: new Date().toISOString(),
+  if (orderItem.status === 'rejected') {
+    return { success: false, message: 'Cannot increase quantity on a cancelled commitment.' };
+  }
+
+  const order = await prisma.order.findUnique({ where: { id: orderItem.orderId } });
+  if (!order) return { success: false, message: 'Associated order not found' };
+  if (order.status === 'completed') {
+    return { success: false, message: 'This order is already fully fulfilled.' };
+  }
+
+  const remaining = order.totalQuantity - order.fulfilledQuantity;
+  if (additionalQuantity > remaining) {
+    return {
+      success: false,
+      message: `You can add at most ${remaining} ${order.unit} more (remaining unfulfilled quantity).`,
     };
-    transactions.push(newTransaction);
   }
-  
-  return orderItem;
+
+  const updated = await prisma.$transaction(async (tx: any) => {
+    const newQty = orderItem.quantity + additionalQuantity;
+    const item = await tx.orderItem.update({
+      where: { id },
+      data: {
+        quantity: newQty,
+        totalPrice: newQty * orderItem.pricePerUnit,
+      },
+    });
+
+    const accepted = await tx.orderItem.aggregate({
+      where: { orderId: order.id, status: 'accepted' },
+      _sum: { quantity: true },
+    });
+    const fulfilled = accepted._sum.quantity ?? 0;
+    const newStatus =
+      fulfilled >= order.totalQuantity ? 'completed'
+      : fulfilled > 0 ? 'partial'
+      : 'pending';
+
+    await tx.order.update({
+      where: { id: order.id },
+      data: { fulfilledQuantity: fulfilled, status: newStatus },
+    });
+
+    return item;
+  });
+
+  // Update product inventory
+  await addOrUpdateVendorProduct({
+    vendorId: requestingVendorId,
+    productName: order.productName,
+    productType: order.productType as unknown as VendorCategory,
+    unit: order.unit,
+    quantity: additionalQuantity,
+    pricePerUnit: orderItem.pricePerUnit,
+  });
+
+  return { success: true, orderItem: updated };
 }
 
-export function getAllTransactions(): Transaction[] {
-  return transactions;
+// ─── Transactions ─────────────────────────────────────────────────────────────
+
+export async function getAllTransactions() {
+  return prisma.transaction.findMany({ orderBy: { createdAt: 'desc' } });
 }
 
-export function getTransactionsByCustomerId(customerId: string): Transaction[] {
-  return transactions.filter((t) => t.customerId === customerId);
+export async function getTransactionsByCustomerId(customerId: string) {
+  return prisma.transaction.findMany({ where: { customerId }, orderBy: { createdAt: 'desc' } });
 }
 
-export function getTransactionsByVendorId(vendorId: string): Transaction[] {
-  return transactions.filter((t) => t.vendorId === vendorId);
+export async function getTransactionsByVendorId(vendorId: string) {
+  return prisma.transaction.findMany({ where: { vendorId }, orderBy: { createdAt: 'desc' } });
+}
+
+// ─── Notifications ────────────────────────────────────────────────────────────
+
+export async function getNotificationsByVendorId(vendorId: string) {
+  return prisma.notification.findMany({ where: { vendorId }, orderBy: { createdAt: 'desc' } });
+}
+
+export async function getNotificationById(id: string) {
+  return prisma.notification.findUnique({ where: { id } });
+}
+
+export async function createNotification(data: {
+  vendorId: string;
+  orderId: string;
+  customerId: string;
+  productName: string;
+  productType: VendorCategory;
+  totalQuantity: number;
+  unit: string;
+  status: 'pending';
+}) {
+  return prisma.notification.create({
+    data: {
+      vendorId: data.vendorId,
+      orderId: data.orderId,
+      customerId: data.customerId,
+      productName: data.productName,
+      productType: categoryToEnum(data.productType),
+      totalQuantity: data.totalQuantity,
+      unit: data.unit,
+      status: 'pending',
+    },
+  });
+}
+
+export async function updateNotificationStatus(
+  id: string,
+  status: 'accepted' | 'rejected' | 'completed'
+) {
+  return prisma.notification.update({ where: { id }, data: { status } });
+}
+
+export async function markNotificationAsRead(id: string) {
+  return prisma.notification.update({ where: { id }, data: { read: true } });
+}
+
+export async function markAllNotificationsAsRead(vendorId: string) {
+  await prisma.notification.updateMany({ where: { vendorId }, data: { read: true } });
+  return prisma.notification.findMany({ where: { vendorId } });
 }
