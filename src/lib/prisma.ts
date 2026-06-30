@@ -3,16 +3,17 @@
 // @ts-ignore
 import { PrismaClient } from '../../generated/prisma/client.js';
 import { PrismaPg } from '@prisma/adapter-pg';
+import pg from 'pg';
 
 type PrismaClientInstance = InstanceType<typeof PrismaClient>;
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClientInstance };
 
 function createPrismaClient(): PrismaClientInstance {
-  const isProduction = process.env.NODE_ENV === 'production';
-  const adapter = new PrismaPg({
+  const pool = new pg.Pool({
     connectionString: process.env.DATABASE_URL!,
-    ...(isProduction && { ssl: { rejectUnauthorized: false } }),
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
   });
+  const adapter = new PrismaPg(pool);
   // @ts-ignore — adapter typing resolves correctly after prisma generate
   return new PrismaClient({ adapter });
 }
