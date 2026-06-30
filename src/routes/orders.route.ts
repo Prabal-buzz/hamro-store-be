@@ -151,14 +151,17 @@ router.get('/available', authMiddleware, vendorMiddleware, async (req, res) => {
 router.get('/notifications', authMiddleware, vendorMiddleware, async (req, res) => {
   try {
     const userId = (req as any).user?.id as string;
-    res.json({ success: true, data: { notifications: await getNotificationsByVendorId(userId) } });
+    const raw = await getNotificationsByVendorId(userId);
+    const notifications = raw.map((n: any) => ({ ...n, productType: enumToCategory(n.productType) }));
+    res.json({ success: true, data: { notifications } });
   } catch { res.status(500).json({ success: false, message: 'Failed to fetch notifications' }); }
 });
 
 router.get('/notifications/:id', authMiddleware, vendorMiddleware, async (req, res) => {
   try {
-    const notification = await getNotificationById(req.params.id);
-    if (!notification) return res.status(404).json({ success: false, message: 'Notification not found' });
+    const n = await getNotificationById(req.params.id);
+    if (!n) return res.status(404).json({ success: false, message: 'Notification not found' });
+    const notification = { ...n, productType: enumToCategory(n.productType as string) };
     res.json({ success: true, data: { notification } });
   } catch { res.status(500).json({ success: false, message: 'Failed to fetch notification' }); }
 });

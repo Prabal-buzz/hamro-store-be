@@ -3,6 +3,7 @@ import { VendorCategory } from './auth.js';
 export interface MarketPrice {
   id: string;
   name: string;
+  nameNp?: string; // Nepali name from /np API
   unit: string;
   minPrice: number;
   maxPrice: number;
