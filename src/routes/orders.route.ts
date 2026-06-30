@@ -19,6 +19,11 @@ import {
   updateNotificationStatus,
   markNotificationAsRead,
   markAllNotificationsAsRead,
+  getGroupedAvailableOrders,
+  getGroupedCommitments,
+  acceptGroupedProduct,
+  increaseGroupedProductQuantity,
+  getAllOrderItemsEnriched,
 } from '../utils/orders.js';
 import { VendorCategory } from '../types/orders.js';
 import { VENDOR_CATEGORIES } from '../types/auth.js';
@@ -148,6 +153,29 @@ router.get('/available', authMiddleware, vendorMiddleware, async (req, res) => {
   } catch { res.status(500).json({ success: false, message: 'Failed to fetch available orders' }); }
 });
 
+router.get('/available/grouped', authMiddleware, vendorMiddleware, async (req, res) => {
+  try {
+    const vendorId = (req as any).user?.id as string;
+    const products = await getGroupedAvailableOrders(vendorId);
+    res.json({ success: true, data: { products } });
+  } catch { res.status(500).json({ success: false, message: 'Failed to fetch grouped orders' }); }
+});
+
+router.get('/me/commitments/grouped', authMiddleware, vendorMiddleware, async (req, res) => {
+  try {
+    const vendorId = (req as any).user?.id as string;
+    const products = await getGroupedCommitments(vendorId);
+    res.json({ success: true, data: { products } });
+  } catch { res.status(500).json({ success: false, message: 'Failed to fetch grouped commitments' }); }
+});
+
+router.get('/admin/order-items', authMiddleware, adminMiddleware, async (_req, res) => {
+  try {
+    const items = await getAllOrderItemsEnriched();
+    res.json({ success: true, data: { items } });
+  } catch { res.status(500).json({ success: false, message: 'Failed to fetch order items' }); }
+});
+
 router.get('/notifications', authMiddleware, vendorMiddleware, async (req, res) => {
   try {
     const userId = (req as any).user?.id as string;
@@ -263,6 +291,39 @@ router.post('/items', authMiddleware, vendorMiddleware, async (req, res) => {
   } catch (error) {
     if (error instanceof z.ZodError) return res.status(400).json({ success: false, message: 'Validation error', errors: error.errors });
     res.status(500).json({ success: false, message: 'Failed to create order item' });
+  }
+});
+
+router.post('/items/grouped', authMiddleware, vendorMiddleware, async (req, res) => {
+  try {
+    const { productName, quantity, pricePerUnit } = z.object({
+      productName: z.string().min(1),
+      quantity: z.number().positive(),
+      pricePerUnit: z.number().positive(),
+    }).parse(req.body);
+    const vendorId = (req as any).user?.id as string;
+    const result = await acceptGroupedProduct({ vendorId, productName, quantity, pricePerUnit });
+    if (!result.success) return res.status(400).json({ success: false, message: result.message });
+    res.status(201).json({ success: true, data: { items: result.items } });
+  } catch (error) {
+    if (error instanceof z.ZodError) return res.status(400).json({ success: false, message: 'Validation error', errors: error.errors });
+    res.status(500).json({ success: false, message: 'Failed to accept grouped product' });
+  }
+});
+
+router.put('/items/product/quantity', authMiddleware, vendorMiddleware, async (req, res) => {
+  try {
+    const { productName, additionalQuantity } = z.object({
+      productName: z.string().min(1),
+      additionalQuantity: z.number().positive(),
+    }).parse(req.body);
+    const vendorId = (req as any).user?.id as string;
+    const result = await increaseGroupedProductQuantity({ vendorId, productName, additionalQuantity });
+    if (!result.success) return res.status(400).json({ success: false, message: result.message });
+    res.json({ success: true, data: { items: result.items, addedQty: result.addedQty } });
+  } catch (error) {
+    if (error instanceof z.ZodError) return res.status(400).json({ success: false, message: 'Validation error', errors: error.errors });
+    res.status(500).json({ success: false, message: 'Failed to increase grouped quantity' });
   }
 });
 

@@ -1,203 +1,324 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { authMiddleware } from '../middlewares/auth.middleware.js';
-import { adminMiddleware } from '../middlewares/auth.middleware.js';
-import { getAllOrders, getOrderById, getOrdersByCustomerId, getOrdersByVendorId, createOrder, createOrderItem, updateOrderItemStatus, } from '../utils/orders.js';
+import { authMiddleware, adminMiddleware } from '../middlewares/auth.middleware.js';
+import { getAllOrders, getAllOrderItems, getOrderById, getOrderItemById, getOrdersByCustomerId, getOrdersByVendorId, createOrder, createOrderItem, updateOrderItemStatus, increaseOrderItemQuantity, createNotification, getNotificationsByVendorId, getNotificationById, updateNotificationStatus, markNotificationAsRead, markAllNotificationsAsRead, } from '../utils/orders.js';
+import { VENDOR_CATEGORIES } from '../types/auth.js';
+import { prisma } from '../lib/prisma.js';
+import { enumToCategory } from '../utils/users.js';
 const router = Router();
-// Validation schemas
+// ─── Role middlewares ─────────────────────────────────────────────────────────
+const vendorMiddleware = (req, res, next) => {
+    if (req.user?.role !== 'vendor') {
+        return res.status(403).json({ success: false, message: 'Access denied. Vendor only.' });
+    }
+    next();
+};
+const customerMiddleware = (req, res, next) => {
+    if (req.user?.role !== 'customer') {
+        return res.status(403).json({ success: false, message: 'Access denied. Customer only.' });
+    }
+    next();
+};
+// ─── Validation schemas ───────────────────────────────────────────────────────
 const createOrderSchema = z.object({
-    meatType: z.string().min(1, "Meat type is required"),
-    totalQuantity: z.number().positive("Quantity must be positive"),
-    unit: z.string().min(1, "Unit is required"),
+    productType: z.enum(VENDOR_CATEGORIES),
+    productName: z.string().min(1),
+    totalQuantity: z.number().positive(),
+    unit: z.string().min(1),
 });
 const createOrderItemSchema = z.object({
-    orderId: z.string().min(1, "Order ID is required"),
-    vendorId: z.string().min(1, "Vendor ID is required"),
-    quantity: z.number().positive("Quantity must be positive"),
-    pricePerUnit: z.number().positive("Price must be positive"),
+    orderId: z.string().min(1),
+    vendorId: z.string().min(1),
+    quantity: z.number().positive(),
+    pricePerUnit: z.number().positive(),
 });
 const updateOrderItemStatusSchema = z.object({
-    status: z.enum(["accepted", "rejected", "completed"]),
+    status: z.enum(['accepted', 'rejected', 'completed']),
 });
-// GET /orders - Get all orders (admin only)
-router.get('/', authMiddleware, adminMiddleware, (req, res) => {
+// ─── GET routes (specific paths BEFORE /:id) ─────────────────────────────────
+router.get('/', authMiddleware, adminMiddleware, async (_req, res) => {
     try {
-        const orders = getAllOrders();
-        res.json({
-            success: true,
-            data: { orders },
-        });
+        res.json({ success: true, data: { orders: await getAllOrders() } });
     }
-    catch (error) {
-        res.status(500).json({
-            success: false,
-            message: 'Failed to fetch orders',
-        });
+    catch {
+        res.status(500).json({ success: false, message: 'Failed to fetch orders' });
     }
 });
-// GET /orders/:id - Get order by ID
-router.get('/:id', authMiddleware, (req, res) => {
+router.get('/admin/enriched', authMiddleware, adminMiddleware, async (_req, res) => {
     try {
-        const order = getOrderById(req.params.id);
-        if (!order) {
-            return res.status(404).json({
-                success: false,
-                message: 'Order not found',
+        const [allOrders, allItems, allUsers] = await Promise.all([
+            getAllOrders(),
+            getAllOrderItems(),
+            prisma.user.findMany({ select: { id: true, name: true, email: true } }),
+        ]);
+        const enriched = allOrders.map((order) => {
+            const customer = allUsers.find((u) => u.id === order.customerId);
+            const items = allItems
+                .filter((oi) => oi.orderId === order.id)
+                .map((oi) => {
+                const vendor = allUsers.find((u) => u.id === oi.vendorId);
+                return { ...oi, vendorName: vendor?.name ?? oi.vendorId, vendorEmail: vendor?.email ?? '' };
             });
+            return {
+                ...order,
+                customerName: customer?.name ?? order.customerId,
+                customerEmail: customer?.email ?? '',
+                items,
+            };
+        });
+        res.json({ success: true, data: { orders: enriched } });
+    }
+    catch {
+        res.status(500).json({ success: false, message: 'Failed to fetch enriched orders' });
+    }
+});
+router.get('/me', authMiddleware, customerMiddleware, async (req, res) => {
+    try {
+        const customerId = req.user?.id;
+        const [orders, allItems] = await Promise.all([
+            getOrdersByCustomerId(customerId),
+            getAllOrderItems(),
+        ]);
+        const enriched = orders.map((order) => ({
+            ...order,
+            items: allItems.filter((oi) => oi.orderId === order.id),
+        }));
+        res.json({ success: true, data: { orders: enriched } });
+    }
+    catch {
+        res.status(500).json({ success: false, message: 'Failed to fetch your orders' });
+    }
+});
+router.get('/me/commitments', authMiddleware, vendorMiddleware, async (req, res) => {
+    try {
+        const vendorId = req.user?.id;
+        const items = await getOrdersByVendorId(vendorId);
+        const enriched = await Promise.all(items.map(async (item) => {
+            const order = await getOrderById(item.orderId);
+            return {
+                ...item,
+                productName: order?.productName ?? 'Unknown',
+                productType: order?.productType ? enumToCategory(order.productType) : 'Unknown',
+                unit: order?.unit ?? '',
+                orderStatus: order?.status ?? 'unknown',
+                totalQuantity: order?.totalQuantity ?? 0,
+                fulfilledQuantity: order?.fulfilledQuantity ?? 0,
+            };
+        }));
+        res.json({ success: true, data: { commitments: enriched } });
+    }
+    catch {
+        res.status(500).json({ success: false, message: 'Failed to fetch your commitments' });
+    }
+});
+router.get('/available', authMiddleware, vendorMiddleware, async (req, res) => {
+    try {
+        const vendorId = req.user?.id;
+        const vendor = await prisma.user.findUnique({ where: { id: vendorId } });
+        if (!vendor?.category) {
+            return res.status(403).json({ success: false, message: 'Vendor has no category assigned.' });
         }
-        res.json({
-            success: true,
-            data: { order },
+        const orders = await prisma.order.findMany({
+            where: { status: { in: ['pending', 'partial'] }, productType: vendor.category },
+            orderBy: { createdAt: 'desc' },
         });
+        res.json({ success: true, data: { orders } });
     }
-    catch (error) {
-        res.status(500).json({
-            success: false,
-            message: 'Failed to fetch order',
-        });
+    catch {
+        res.status(500).json({ success: false, message: 'Failed to fetch available orders' });
     }
 });
-// GET /orders/customer/:customerId - Get orders by customer ID
-router.get('/customer/:customerId', authMiddleware, (req, res) => {
+router.get('/notifications', authMiddleware, vendorMiddleware, async (req, res) => {
     try {
-        const orders = getOrdersByCustomerId(req.params.customerId);
-        res.json({
-            success: true,
-            data: { orders },
-        });
-    }
-    catch (error) {
-        res.status(500).json({
-            success: false,
-            message: 'Failed to fetch orders',
-        });
-    }
-});
-// GET /orders/vendor/:vendorId - Get order items by vendor ID
-router.get('/vendor/:vendorId', authMiddleware, (req, res) => {
-    try {
-        const orderItems = getOrdersByVendorId(req.params.vendorId);
-        res.json({
-            success: true,
-            data: { orderItems },
-        });
-    }
-    catch (error) {
-        res.status(500).json({
-            success: false,
-            message: 'Failed to fetch order items',
-        });
-    }
-});
-// GET /orders/available - Get all pending orders available for vendors to accept
-router.get('/available', authMiddleware, (req, res) => {
-    try {
-        const allOrders = getAllOrders();
-        const availableOrders = allOrders.filter((order) => order.status === "pending" || order.status === "partial");
-        res.json({
-            success: true,
-            data: { orders: availableOrders },
-        });
-    }
-    catch (error) {
-        res.status(500).json({
-            success: false,
-            message: 'Failed to fetch available orders',
-        });
-    }
-});
-// POST /orders - Create new order (customer only)
-router.post('/', authMiddleware, (req, res) => {
-    try {
-        const validatedData = createOrderSchema.parse(req.body);
         const userId = req.user?.id;
-        if (!userId) {
-            return res.status(401).json({
-                success: false,
-                message: 'User not authenticated',
-            });
-        }
-        const newOrder = createOrder({
+        const raw = await getNotificationsByVendorId(userId);
+        const notifications = raw.map((n) => ({ ...n, productType: enumToCategory(n.productType) }));
+        res.json({ success: true, data: { notifications } });
+    }
+    catch {
+        res.status(500).json({ success: false, message: 'Failed to fetch notifications' });
+    }
+});
+router.get('/notifications/:id', authMiddleware, vendorMiddleware, async (req, res) => {
+    try {
+        const n = await getNotificationById(req.params.id);
+        if (!n)
+            return res.status(404).json({ success: false, message: 'Notification not found' });
+        const notification = { ...n, productType: enumToCategory(n.productType) };
+        res.json({ success: true, data: { notification } });
+    }
+    catch {
+        res.status(500).json({ success: false, message: 'Failed to fetch notification' });
+    }
+});
+router.get('/customer/:customerId', authMiddleware, async (req, res) => {
+    try {
+        res.json({ success: true, data: { orders: await getOrdersByCustomerId(req.params.customerId) } });
+    }
+    catch {
+        res.status(500).json({ success: false, message: 'Failed to fetch orders' });
+    }
+});
+router.get('/vendor/:vendorId', authMiddleware, async (req, res) => {
+    try {
+        res.json({ success: true, data: { orderItems: await getOrdersByVendorId(req.params.vendorId) } });
+    }
+    catch {
+        res.status(500).json({ success: false, message: 'Failed to fetch order items' });
+    }
+});
+router.get('/:id', authMiddleware, async (req, res) => {
+    try {
+        const order = await getOrderById(req.params.id);
+        if (!order)
+            return res.status(404).json({ success: false, message: 'Order not found' });
+        res.json({ success: true, data: { order } });
+    }
+    catch {
+        res.status(500).json({ success: false, message: 'Failed to fetch order' });
+    }
+});
+// ─── Mutations ────────────────────────────────────────────────────────────────
+router.post('/', authMiddleware, async (req, res) => {
+    try {
+        const data = createOrderSchema.parse(req.body);
+        const userId = req.user?.id;
+        const newOrder = await createOrder({
             customerId: userId,
-            meatType: validatedData.meatType,
-            totalQuantity: validatedData.totalQuantity,
-            unit: validatedData.unit,
+            productType: data.productType,
+            productName: data.productName,
+            totalQuantity: data.totalQuantity,
+            unit: data.unit,
         });
-        res.status(201).json({
-            success: true,
-            data: { order: newOrder },
+        // Notify category-matching vendors
+        const vendors = await prisma.user.findMany({
+            where: { role: 'vendor', category: newOrder.productType },
         });
+        await Promise.all(vendors.map((v) => createNotification({
+            vendorId: v.id,
+            orderId: newOrder.id,
+            customerId: userId,
+            productName: newOrder.productName,
+            productType: enumToCategory(newOrder.productType),
+            totalQuantity: newOrder.totalQuantity,
+            unit: newOrder.unit,
+            status: 'pending',
+        })));
+        res.status(201).json({ success: true, data: { order: newOrder } });
     }
     catch (error) {
-        if (error instanceof z.ZodError) {
-            return res.status(400).json({
-                success: false,
-                message: 'Validation error',
-                errors: error.errors,
-            });
-        }
-        res.status(500).json({
-            success: false,
-            message: 'Failed to create order',
-        });
+        if (error instanceof z.ZodError)
+            return res.status(400).json({ success: false, message: 'Validation error', errors: error.errors });
+        res.status(500).json({ success: false, message: 'Failed to create order' });
     }
 });
-// POST /orders/items - Create order item (vendor accepts order)
-router.post('/items', authMiddleware, (req, res) => {
+router.post('/items', authMiddleware, vendorMiddleware, async (req, res) => {
     try {
-        const validatedData = createOrderItemSchema.parse(req.body);
-        const totalPrice = validatedData.quantity * validatedData.pricePerUnit;
-        const newOrderItem = createOrderItem({
-            ...validatedData,
-            totalPrice,
+        const data = createOrderItemSchema.parse(req.body);
+        const vendorId = req.user?.id;
+        const order = await getOrderById(data.orderId);
+        if (!order)
+            return res.status(404).json({ success: false, message: 'Order not found' });
+        if (order.status === 'completed') {
+            return res.status(400).json({ success: false, message: 'This order has already been fully fulfilled.' });
+        }
+        const vendor = await prisma.user.findUnique({ where: { id: vendorId } });
+        if (!vendor || vendor.category !== order.productType) {
+            return res.status(403).json({ success: false, message: `Only vendors in the "${enumToCategory(order.productType)}" category can accept this order.` });
+        }
+        const existing = await prisma.orderItem.findFirst({
+            where: { orderId: order.id, vendorId, status: { not: 'rejected' } },
         });
-        res.status(201).json({
-            success: true,
-            data: { orderItem: newOrderItem },
+        if (existing)
+            return res.status(400).json({ success: false, message: 'You already have an active commitment for this order.' });
+        const remaining = order.totalQuantity - order.fulfilledQuantity;
+        if (data.quantity > remaining) {
+            return res.status(400).json({ success: false, message: `You can supply at most ${remaining} ${order.unit} for this order.` });
+        }
+        const newItem = await createOrderItem({
+            orderId: data.orderId,
+            vendorId,
+            quantity: data.quantity,
+            pricePerUnit: data.pricePerUnit,
+            totalPrice: data.quantity * data.pricePerUnit,
         });
+        res.status(201).json({ success: true, data: { orderItem: newItem } });
     }
     catch (error) {
-        if (error instanceof z.ZodError) {
-            return res.status(400).json({
-                success: false,
-                message: 'Validation error',
-                errors: error.errors,
-            });
-        }
-        res.status(500).json({
-            success: false,
-            message: 'Failed to create order item',
-        });
+        if (error instanceof z.ZodError)
+            return res.status(400).json({ success: false, message: 'Validation error', errors: error.errors });
+        res.status(500).json({ success: false, message: 'Failed to create order item' });
     }
 });
-// PUT /orders/items/:id/status - Update order item status (vendor)
-router.put('/items/:id/status', authMiddleware, (req, res) => {
+router.put('/items/:id/quantity', authMiddleware, vendorMiddleware, async (req, res) => {
     try {
-        const validatedData = updateOrderItemStatusSchema.parse(req.body);
-        const updatedOrderItem = updateOrderItemStatus(req.params.id, validatedData.status);
-        if (!updatedOrderItem) {
-            return res.status(404).json({
-                success: false,
-                message: 'Order item not found',
-            });
-        }
-        res.json({
-            success: true,
-            data: { orderItem: updatedOrderItem },
-        });
+        const { additionalQuantity } = z.object({ additionalQuantity: z.number().positive() }).parse(req.body);
+        const vendorId = req.user?.id;
+        const result = await increaseOrderItemQuantity(req.params.id, additionalQuantity, vendorId);
+        if (!result.success)
+            return res.status(400).json({ success: false, message: result.message });
+        res.json({ success: true, data: { orderItem: result.orderItem } });
     }
     catch (error) {
-        if (error instanceof z.ZodError) {
-            return res.status(400).json({
-                success: false,
-                message: 'Validation error',
-                errors: error.errors,
-            });
-        }
-        res.status(500).json({
-            success: false,
-            message: 'Failed to update order item status',
-        });
+        if (error instanceof z.ZodError)
+            return res.status(400).json({ success: false, message: 'Validation error', errors: error.errors });
+        res.status(500).json({ success: false, message: 'Failed to increase quantity' });
+    }
+});
+router.put('/items/:id/status', authMiddleware, vendorMiddleware, async (req, res) => {
+    try {
+        const { status } = updateOrderItemStatusSchema.parse(req.body);
+        const vendorId = req.user?.id;
+        const orderItem = await getOrderItemById(req.params.id);
+        if (!orderItem)
+            return res.status(404).json({ success: false, message: 'Order item not found' });
+        if (orderItem.vendorId !== vendorId)
+            return res.status(403).json({ success: false, message: 'This order item does not belong to you.' });
+        const updated = await updateOrderItemStatus(req.params.id, status);
+        res.json({ success: true, data: { orderItem: updated } });
+    }
+    catch (error) {
+        if (error instanceof z.ZodError)
+            return res.status(400).json({ success: false, message: 'Validation error', errors: error.errors });
+        res.status(500).json({ success: false, message: 'Failed to update order item status' });
+    }
+});
+router.put('/notifications/read-all', authMiddleware, vendorMiddleware, async (req, res) => {
+    try {
+        const userId = req.user?.id;
+        res.json({ success: true, data: { notifications: await markAllNotificationsAsRead(userId) } });
+    }
+    catch {
+        res.status(500).json({ success: false, message: 'Failed to mark all as read' });
+    }
+});
+router.put('/notifications/:id/status', authMiddleware, vendorMiddleware, async (req, res) => {
+    try {
+        const { status } = updateOrderItemStatusSchema.parse(req.body);
+        const vendorId = req.user?.id;
+        const notification = await getNotificationById(req.params.id);
+        if (!notification)
+            return res.status(404).json({ success: false, message: 'Notification not found' });
+        if (notification.vendorId !== vendorId)
+            return res.status(403).json({ success: false, message: 'This notification is not assigned to you.' });
+        const updated = await updateNotificationStatus(req.params.id, status);
+        res.json({ success: true, data: { notification: updated } });
+    }
+    catch (error) {
+        if (error instanceof z.ZodError)
+            return res.status(400).json({ success: false, message: 'Validation error', errors: error.errors });
+        res.status(500).json({ success: false, message: 'Failed to update notification status' });
+    }
+});
+router.put('/notifications/:id/read', authMiddleware, vendorMiddleware, async (req, res) => {
+    try {
+        const updated = await markNotificationAsRead(req.params.id);
+        if (!updated)
+            return res.status(404).json({ success: false, message: 'Notification not found' });
+        res.json({ success: true, data: { notification: updated } });
+    }
+    catch {
+        res.status(500).json({ success: false, message: 'Failed to mark as read' });
     }
 });
 export default router;
