@@ -23,6 +23,8 @@ import {
   getGroupedCommitments,
   acceptGroupedProduct,
   increaseGroupedProductQuantity,
+  cancelGroupedProduct,
+  cancelOrder,
   getAllOrderItemsEnriched,
 } from '../utils/orders.js';
 import { VendorCategory } from '../types/orders.js';
@@ -176,6 +178,113 @@ router.get('/admin/order-items', authMiddleware, adminMiddleware, async (_req, r
   } catch { res.status(500).json({ success: false, message: 'Failed to fetch order items' }); }
 });
 
+/**
+ * GET /orders/admin/grouped
+ * All orders aggregated by product name — for the admin orders overview page.
+ */
+router.get('/admin/grouped', authMiddleware, adminMiddleware, async (_req, res) => {
+  try {
+    const [allOrders, allItems, allUsers] = await Promise.all([
+      getAllOrders(),
+      getAllOrderItems(),
+      prisma.user.findMany({ select: { id: true, name: true, email: true } }),
+    ]);
+
+    const grouped: Record<string, {
+      productName: string; productType: string; unit: string;
+      totalOrdered: number; totalFulfilled: number;
+      customerIds: Set<string>;
+      orders: any[];
+    }> = {};
+
+    for (const order of allOrders as any[]) {
+      const customer = allUsers.find((u: any) => u.id === order.customerId);
+      const items = (allItems as any[])
+        .filter((oi: any) => oi.orderId === order.id)
+        .map((oi: any) => {
+          const vendor = allUsers.find((u: any) => u.id === oi.vendorId);
+          return { ...oi, vendorName: vendor?.name ?? oi.vendorId, vendorEmail: vendor?.email ?? '' };
+        });
+
+      const enrichedOrder = {
+        ...order,
+        productType: enumToCategory(order.productType as string),
+        customerName: customer?.name ?? order.customerId,
+        customerEmail: customer?.email ?? '',
+        items,
+      };
+
+      const key = order.productName;
+      if (!grouped[key]) {
+        grouped[key] = {
+          productName: order.productName,
+          productType: enumToCategory(order.productType as string),
+          unit: order.unit,
+          totalOrdered: 0,
+          totalFulfilled: 0,
+          customerIds: new Set(),
+          orders: [],
+        };
+      }
+      grouped[key].totalOrdered += order.totalQuantity;
+      grouped[key].totalFulfilled += order.fulfilledQuantity;
+      grouped[key].customerIds.add(order.customerId);
+      grouped[key].orders.push(enrichedOrder);
+    }
+
+    const groups = Object.values(grouped)
+      .map(({ customerIds, ...rest }) => ({ ...rest, customerCount: customerIds.size }))
+      .sort((a, b) => a.productName.localeCompare(b.productName));
+
+    res.json({ success: true, data: { groups } });
+  } catch (err) {
+    console.error('admin/grouped error:', err);
+    res.status(500).json({ success: false, message: 'Failed to fetch grouped orders' });
+  }
+});
+
+/**
+ * GET /orders/admin/customer/:customerId
+ * Enriched orders for a single customer — for the customer detail view.
+ */
+router.get('/admin/customer/:customerId', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const { customerId } = req.params;
+    const [orders, allItems, allUsers] = await Promise.all([
+      getOrdersByCustomerId(customerId),
+      getAllOrderItems(),
+      prisma.user.findMany({ select: { id: true, name: true, email: true, collateral: true, status: true } }),
+    ]);
+
+    const customer = allUsers.find((u: any) => u.id === customerId);
+    const enriched = (orders as any[]).map((order: any) => ({
+      ...order,
+      productType: enumToCategory(order.productType as string),
+      customerName: customer?.name ?? customerId,
+      customerEmail: customer?.email ?? '',
+      items: (allItems as any[])
+        .filter((oi: any) => oi.orderId === order.id)
+        .map((oi: any) => {
+          const vendor = allUsers.find((u: any) => u.id === oi.vendorId);
+          return { ...oi, vendorName: vendor?.name ?? oi.vendorId, vendorEmail: vendor?.email ?? '' };
+        }),
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        customer: customer
+          ? { id: customer.id, name: (customer as any).name, email: (customer as any).email, collateral: (customer as any).collateral ?? 0, status: (customer as any).status }
+          : { id: customerId, name: 'Unknown', email: '', collateral: 0, status: 'active' },
+        orders: enriched,
+      },
+    });
+  } catch (err) {
+    console.error('admin/customer/:id error:', err);
+    res.status(500).json({ success: false, message: 'Failed to fetch customer orders' });
+  }
+});
+
 router.get('/notifications', authMiddleware, vendorMiddleware, async (req, res) => {
   try {
     const userId = (req as any).user?.id as string;
@@ -215,6 +324,16 @@ router.get('/:id', authMiddleware, async (req, res) => {
 });
 
 // ─── Mutations ────────────────────────────────────────────────────────────────
+
+// DELETE /:id — customer cancels their own pending order
+router.delete('/:id', authMiddleware, async (req, res) => {
+  try {
+    const customerId = (req as any).user?.id as string;
+    const result = await cancelOrder(req.params.id, customerId);
+    if (!result.success) return res.status(400).json({ success: false, message: result.message });
+    res.json({ success: true });
+  } catch { res.status(500).json({ success: false, message: 'Failed to cancel order' }); }
+});
 
 router.post('/', authMiddleware, async (req, res) => {
   try {
@@ -337,6 +456,20 @@ router.put('/items/:id/quantity', authMiddleware, vendorMiddleware, async (req, 
   } catch (error) {
     if (error instanceof z.ZodError) return res.status(400).json({ success: false, message: 'Validation error', errors: error.errors });
     res.status(500).json({ success: false, message: 'Failed to increase quantity' });
+  }
+});
+
+// DELETE /items/grouped — cancel all vendor commitments for a product
+router.delete('/items/grouped', authMiddleware, vendorMiddleware, async (req, res) => {
+  try {
+    const { productName } = z.object({ productName: z.string().min(1) }).parse(req.body);
+    const vendorId = (req as any).user?.id as string;
+    const result = await cancelGroupedProduct({ vendorId, productName });
+    if (!result.success) return res.status(400).json({ success: false, message: result.message });
+    res.json({ success: true, data: { cancelledCount: result.cancelledCount } });
+  } catch (error) {
+    if (error instanceof z.ZodError) return res.status(400).json({ success: false, message: 'Validation error', errors: error.errors });
+    res.status(500).json({ success: false, message: 'Failed to cancel supply commitment' });
   }
 });
 
