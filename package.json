@@ -8,6 +8,7 @@
     "dev": "tsx watch src/index.ts",
     "clean": "rm -rf dist",
     "build": "npm run clean && prisma generate && tsc",
+    "prestart": "prisma db push --accept-data-loss",
     "start": "node dist/index.js",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
