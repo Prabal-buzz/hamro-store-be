@@ -20,8 +20,18 @@ export type UserModel = runtime.Types.Result.DefaultSelection<Prisma.$UserPayloa
 
 export type AggregateUser = {
   _count: UserCountAggregateOutputType | null
+  _avg: UserAvgAggregateOutputType | null
+  _sum: UserSumAggregateOutputType | null
   _min: UserMinAggregateOutputType | null
   _max: UserMaxAggregateOutputType | null
+}
+
+export type UserAvgAggregateOutputType = {
+  collateral: number | null
+}
+
+export type UserSumAggregateOutputType = {
+  collateral: number | null
 }
 
 export type UserMinAggregateOutputType = {
@@ -33,6 +43,7 @@ export type UserMinAggregateOutputType = {
   dashboardUrl: string | null
   status: $Enums.UserStatus | null
   category: $Enums.VendorCategory | null
+  collateral: number | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -46,6 +57,7 @@ export type UserMaxAggregateOutputType = {
   dashboardUrl: string | null
   status: $Enums.UserStatus | null
   category: $Enums.VendorCategory | null
+  collateral: number | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -59,11 +71,20 @@ export type UserCountAggregateOutputType = {
   dashboardUrl: number
   status: number
   category: number
+  collateral: number
   createdAt: number
   updatedAt: number
   _all: number
 }
 
+
+export type UserAvgAggregateInputType = {
+  collateral?: true
+}
+
+export type UserSumAggregateInputType = {
+  collateral?: true
+}
 
 export type UserMinAggregateInputType = {
   id?: true
@@ -74,6 +95,7 @@ export type UserMinAggregateInputType = {
   dashboardUrl?: true
   status?: true
   category?: true
+  collateral?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -87,6 +109,7 @@ export type UserMaxAggregateInputType = {
   dashboardUrl?: true
   status?: true
   category?: true
+  collateral?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -100,6 +123,7 @@ export type UserCountAggregateInputType = {
   dashboardUrl?: true
   status?: true
   category?: true
+  collateral?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -143,6 +167,18 @@ export type UserAggregateArgs<ExtArgs extends runtime.Types.Extensions.InternalA
   /**
    * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
    * 
+   * Select which fields to average
+  **/
+  _avg?: UserAvgAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
+   * Select which fields to sum
+  **/
+  _sum?: UserSumAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
    * Select which fields to find the minimum value
   **/
   _min?: UserMinAggregateInputType
@@ -173,6 +209,8 @@ export type UserGroupByArgs<ExtArgs extends runtime.Types.Extensions.InternalArg
   take?: number
   skip?: number
   _count?: UserCountAggregateInputType | true
+  _avg?: UserAvgAggregateInputType
+  _sum?: UserSumAggregateInputType
   _min?: UserMinAggregateInputType
   _max?: UserMaxAggregateInputType
 }
@@ -186,9 +224,12 @@ export type UserGroupByOutputType = {
   dashboardUrl: string
   status: $Enums.UserStatus
   category: $Enums.VendorCategory | null
+  collateral: number
   createdAt: Date
   updatedAt: Date
   _count: UserCountAggregateOutputType | null
+  _avg: UserAvgAggregateOutputType | null
+  _sum: UserSumAggregateOutputType | null
   _min: UserMinAggregateOutputType | null
   _max: UserMaxAggregateOutputType | null
 }
@@ -220,6 +261,7 @@ export type UserWhereInput = {
   dashboardUrl?: Prisma.StringFilter<"User"> | string
   status?: Prisma.EnumUserStatusFilter<"User"> | $Enums.UserStatus
   category?: Prisma.EnumVendorCategoryNullableFilter<"User"> | $Enums.VendorCategory | null
+  collateral?: Prisma.FloatFilter<"User"> | number
   createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"User"> | Date | string
   orders?: Prisma.OrderListRelationFilter
@@ -239,6 +281,7 @@ export type UserOrderByWithRelationInput = {
   dashboardUrl?: Prisma.SortOrder
   status?: Prisma.SortOrder
   category?: Prisma.SortOrderInput | Prisma.SortOrder
+  collateral?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   orders?: Prisma.OrderOrderByRelationAggregateInput
@@ -261,6 +304,7 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   dashboardUrl?: Prisma.StringFilter<"User"> | string
   status?: Prisma.EnumUserStatusFilter<"User"> | $Enums.UserStatus
   category?: Prisma.EnumVendorCategoryNullableFilter<"User"> | $Enums.VendorCategory | null
+  collateral?: Prisma.FloatFilter<"User"> | number
   createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"User"> | Date | string
   orders?: Prisma.OrderListRelationFilter
@@ -280,11 +324,14 @@ export type UserOrderByWithAggregationInput = {
   dashboardUrl?: Prisma.SortOrder
   status?: Prisma.SortOrder
   category?: Prisma.SortOrderInput | Prisma.SortOrder
+  collateral?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.UserCountOrderByAggregateInput
+  _avg?: Prisma.UserAvgOrderByAggregateInput
   _max?: Prisma.UserMaxOrderByAggregateInput
   _min?: Prisma.UserMinOrderByAggregateInput
+  _sum?: Prisma.UserSumOrderByAggregateInput
 }
 
 export type UserScalarWhereWithAggregatesInput = {
@@ -299,6 +346,7 @@ export type UserScalarWhereWithAggregatesInput = {
   dashboardUrl?: Prisma.StringWithAggregatesFilter<"User"> | string
   status?: Prisma.EnumUserStatusWithAggregatesFilter<"User"> | $Enums.UserStatus
   category?: Prisma.EnumVendorCategoryNullableWithAggregatesFilter<"User"> | $Enums.VendorCategory | null
+  collateral?: Prisma.FloatWithAggregatesFilter<"User"> | number
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"User"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"User"> | Date | string
 }
@@ -312,6 +360,7 @@ export type UserCreateInput = {
   dashboardUrl: string
   status?: $Enums.UserStatus
   category?: $Enums.VendorCategory | null
+  collateral?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   orders?: Prisma.OrderCreateNestedManyWithoutCustomerInput
@@ -331,6 +380,7 @@ export type UserUncheckedCreateInput = {
   dashboardUrl: string
   status?: $Enums.UserStatus
   category?: $Enums.VendorCategory | null
+  collateral?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutCustomerInput
@@ -350,6 +400,7 @@ export type UserUpdateInput = {
   dashboardUrl?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
   category?: Prisma.NullableEnumVendorCategoryFieldUpdateOperationsInput | $Enums.VendorCategory | null
+  collateral?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   orders?: Prisma.OrderUpdateManyWithoutCustomerNestedInput
@@ -369,6 +420,7 @@ export type UserUncheckedUpdateInput = {
   dashboardUrl?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
   category?: Prisma.NullableEnumVendorCategoryFieldUpdateOperationsInput | $Enums.VendorCategory | null
+  collateral?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   orders?: Prisma.OrderUncheckedUpdateManyWithoutCustomerNestedInput
@@ -388,6 +440,7 @@ export type UserCreateManyInput = {
   dashboardUrl: string
   status?: $Enums.UserStatus
   category?: $Enums.VendorCategory | null
+  collateral?: number
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -401,6 +454,7 @@ export type UserUpdateManyMutationInput = {
   dashboardUrl?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
   category?: Prisma.NullableEnumVendorCategoryFieldUpdateOperationsInput | $Enums.VendorCategory | null
+  collateral?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -414,6 +468,7 @@ export type UserUncheckedUpdateManyInput = {
   dashboardUrl?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
   category?: Prisma.NullableEnumVendorCategoryFieldUpdateOperationsInput | $Enums.VendorCategory | null
+  collateral?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -427,8 +482,13 @@ export type UserCountOrderByAggregateInput = {
   dashboardUrl?: Prisma.SortOrder
   status?: Prisma.SortOrder
   category?: Prisma.SortOrder
+  collateral?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+}
+
+export type UserAvgOrderByAggregateInput = {
+  collateral?: Prisma.SortOrder
 }
 
 export type UserMaxOrderByAggregateInput = {
@@ -440,6 +500,7 @@ export type UserMaxOrderByAggregateInput = {
   dashboardUrl?: Prisma.SortOrder
   status?: Prisma.SortOrder
   category?: Prisma.SortOrder
+  collateral?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -453,8 +514,13 @@ export type UserMinOrderByAggregateInput = {
   dashboardUrl?: Prisma.SortOrder
   status?: Prisma.SortOrder
   category?: Prisma.SortOrder
+  collateral?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+}
+
+export type UserSumOrderByAggregateInput = {
+  collateral?: Prisma.SortOrder
 }
 
 export type UserScalarRelationFilter = {
@@ -476,6 +542,14 @@ export type EnumUserStatusFieldUpdateOperationsInput = {
 
 export type NullableEnumVendorCategoryFieldUpdateOperationsInput = {
   set?: $Enums.VendorCategory | null
+}
+
+export type FloatFieldUpdateOperationsInput = {
+  set?: number
+  increment?: number
+  decrement?: number
+  multiply?: number
+  divide?: number
 }
 
 export type DateTimeFieldUpdateOperationsInput = {
@@ -575,6 +649,7 @@ export type UserCreateWithoutOrdersInput = {
   dashboardUrl: string
   status?: $Enums.UserStatus
   category?: $Enums.VendorCategory | null
+  collateral?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   orderItems?: Prisma.OrderItemCreateNestedManyWithoutVendorInput
@@ -593,6 +668,7 @@ export type UserUncheckedCreateWithoutOrdersInput = {
   dashboardUrl: string
   status?: $Enums.UserStatus
   category?: $Enums.VendorCategory | null
+  collateral?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   orderItems?: Prisma.OrderItemUncheckedCreateNestedManyWithoutVendorInput
@@ -627,6 +703,7 @@ export type UserUpdateWithoutOrdersInput = {
   dashboardUrl?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
   category?: Prisma.NullableEnumVendorCategoryFieldUpdateOperationsInput | $Enums.VendorCategory | null
+  collateral?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   orderItems?: Prisma.OrderItemUpdateManyWithoutVendorNestedInput
@@ -645,6 +722,7 @@ export type UserUncheckedUpdateWithoutOrdersInput = {
   dashboardUrl?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
   category?: Prisma.NullableEnumVendorCategoryFieldUpdateOperationsInput | $Enums.VendorCategory | null
+  collateral?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   orderItems?: Prisma.OrderItemUncheckedUpdateManyWithoutVendorNestedInput
@@ -663,6 +741,7 @@ export type UserCreateWithoutOrderItemsInput = {
   dashboardUrl: string
   status?: $Enums.UserStatus
   category?: $Enums.VendorCategory | null
+  collateral?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   orders?: Prisma.OrderCreateNestedManyWithoutCustomerInput
@@ -681,6 +760,7 @@ export type UserUncheckedCreateWithoutOrderItemsInput = {
   dashboardUrl: string
   status?: $Enums.UserStatus
   category?: $Enums.VendorCategory | null
+  collateral?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutCustomerInput
@@ -715,6 +795,7 @@ export type UserUpdateWithoutOrderItemsInput = {
   dashboardUrl?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
   category?: Prisma.NullableEnumVendorCategoryFieldUpdateOperationsInput | $Enums.VendorCategory | null
+  collateral?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   orders?: Prisma.OrderUpdateManyWithoutCustomerNestedInput
@@ -733,6 +814,7 @@ export type UserUncheckedUpdateWithoutOrderItemsInput = {
   dashboardUrl?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
   category?: Prisma.NullableEnumVendorCategoryFieldUpdateOperationsInput | $Enums.VendorCategory | null
+  collateral?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   orders?: Prisma.OrderUncheckedUpdateManyWithoutCustomerNestedInput
@@ -751,6 +833,7 @@ export type UserCreateWithoutTransactionsInput = {
   dashboardUrl: string
   status?: $Enums.UserStatus
   category?: $Enums.VendorCategory | null
+  collateral?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   orders?: Prisma.OrderCreateNestedManyWithoutCustomerInput
@@ -769,6 +852,7 @@ export type UserUncheckedCreateWithoutTransactionsInput = {
   dashboardUrl: string
   status?: $Enums.UserStatus
   category?: $Enums.VendorCategory | null
+  collateral?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutCustomerInput
@@ -803,6 +887,7 @@ export type UserUpdateWithoutTransactionsInput = {
   dashboardUrl?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
   category?: Prisma.NullableEnumVendorCategoryFieldUpdateOperationsInput | $Enums.VendorCategory | null
+  collateral?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   orders?: Prisma.OrderUpdateManyWithoutCustomerNestedInput
@@ -821,6 +906,7 @@ export type UserUncheckedUpdateWithoutTransactionsInput = {
   dashboardUrl?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
   category?: Prisma.NullableEnumVendorCategoryFieldUpdateOperationsInput | $Enums.VendorCategory | null
+  collateral?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   orders?: Prisma.OrderUncheckedUpdateManyWithoutCustomerNestedInput
@@ -839,6 +925,7 @@ export type UserCreateWithoutNotificationsInput = {
   dashboardUrl: string
   status?: $Enums.UserStatus
   category?: $Enums.VendorCategory | null
+  collateral?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   orders?: Prisma.OrderCreateNestedManyWithoutCustomerInput
@@ -857,6 +944,7 @@ export type UserUncheckedCreateWithoutNotificationsInput = {
   dashboardUrl: string
   status?: $Enums.UserStatus
   category?: $Enums.VendorCategory | null
+  collateral?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutCustomerInput
@@ -891,6 +979,7 @@ export type UserUpdateWithoutNotificationsInput = {
   dashboardUrl?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
   category?: Prisma.NullableEnumVendorCategoryFieldUpdateOperationsInput | $Enums.VendorCategory | null
+  collateral?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   orders?: Prisma.OrderUpdateManyWithoutCustomerNestedInput
@@ -909,6 +998,7 @@ export type UserUncheckedUpdateWithoutNotificationsInput = {
   dashboardUrl?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
   category?: Prisma.NullableEnumVendorCategoryFieldUpdateOperationsInput | $Enums.VendorCategory | null
+  collateral?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   orders?: Prisma.OrderUncheckedUpdateManyWithoutCustomerNestedInput
@@ -927,6 +1017,7 @@ export type UserCreateWithoutCartItemsInput = {
   dashboardUrl: string
   status?: $Enums.UserStatus
   category?: $Enums.VendorCategory | null
+  collateral?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   orders?: Prisma.OrderCreateNestedManyWithoutCustomerInput
@@ -945,6 +1036,7 @@ export type UserUncheckedCreateWithoutCartItemsInput = {
   dashboardUrl: string
   status?: $Enums.UserStatus
   category?: $Enums.VendorCategory | null
+  collateral?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutCustomerInput
@@ -979,6 +1071,7 @@ export type UserUpdateWithoutCartItemsInput = {
   dashboardUrl?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
   category?: Prisma.NullableEnumVendorCategoryFieldUpdateOperationsInput | $Enums.VendorCategory | null
+  collateral?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   orders?: Prisma.OrderUpdateManyWithoutCustomerNestedInput
@@ -997,6 +1090,7 @@ export type UserUncheckedUpdateWithoutCartItemsInput = {
   dashboardUrl?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
   category?: Prisma.NullableEnumVendorCategoryFieldUpdateOperationsInput | $Enums.VendorCategory | null
+  collateral?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   orders?: Prisma.OrderUncheckedUpdateManyWithoutCustomerNestedInput
@@ -1015,6 +1109,7 @@ export type UserCreateWithoutProductsInput = {
   dashboardUrl: string
   status?: $Enums.UserStatus
   category?: $Enums.VendorCategory | null
+  collateral?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   orders?: Prisma.OrderCreateNestedManyWithoutCustomerInput
@@ -1033,6 +1128,7 @@ export type UserUncheckedCreateWithoutProductsInput = {
   dashboardUrl: string
   status?: $Enums.UserStatus
   category?: $Enums.VendorCategory | null
+  collateral?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutCustomerInput
@@ -1067,6 +1163,7 @@ export type UserUpdateWithoutProductsInput = {
   dashboardUrl?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
   category?: Prisma.NullableEnumVendorCategoryFieldUpdateOperationsInput | $Enums.VendorCategory | null
+  collateral?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   orders?: Prisma.OrderUpdateManyWithoutCustomerNestedInput
@@ -1085,6 +1182,7 @@ export type UserUncheckedUpdateWithoutProductsInput = {
   dashboardUrl?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
   category?: Prisma.NullableEnumVendorCategoryFieldUpdateOperationsInput | $Enums.VendorCategory | null
+  collateral?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   orders?: Prisma.OrderUncheckedUpdateManyWithoutCustomerNestedInput
@@ -1179,6 +1277,7 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   dashboardUrl?: boolean
   status?: boolean
   category?: boolean
+  collateral?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   orders?: boolean | Prisma.User$ordersArgs<ExtArgs>
@@ -1199,6 +1298,7 @@ export type UserSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   dashboardUrl?: boolean
   status?: boolean
   category?: boolean
+  collateral?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }, ExtArgs["result"]["user"]>
@@ -1212,6 +1312,7 @@ export type UserSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   dashboardUrl?: boolean
   status?: boolean
   category?: boolean
+  collateral?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }, ExtArgs["result"]["user"]>
@@ -1225,11 +1326,12 @@ export type UserSelectScalar = {
   dashboardUrl?: boolean
   status?: boolean
   category?: boolean
+  collateral?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "email" | "passwordHash" | "role" | "name" | "dashboardUrl" | "status" | "category" | "createdAt" | "updatedAt", ExtArgs["result"]["user"]>
+export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "email" | "passwordHash" | "role" | "name" | "dashboardUrl" | "status" | "category" | "collateral" | "createdAt" | "updatedAt", ExtArgs["result"]["user"]>
 export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   orders?: boolean | Prisma.User$ordersArgs<ExtArgs>
   orderItems?: boolean | Prisma.User$orderItemsArgs<ExtArgs>
@@ -1261,6 +1363,7 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     dashboardUrl: string
     status: $Enums.UserStatus
     category: $Enums.VendorCategory | null
+    collateral: number
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["user"]>
@@ -1700,6 +1803,7 @@ export interface UserFieldRefs {
   readonly dashboardUrl: Prisma.FieldRef<"User", 'String'>
   readonly status: Prisma.FieldRef<"User", 'UserStatus'>
   readonly category: Prisma.FieldRef<"User", 'VendorCategory'>
+  readonly collateral: Prisma.FieldRef<"User", 'Float'>
   readonly createdAt: Prisma.FieldRef<"User", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"User", 'DateTime'>
 }
