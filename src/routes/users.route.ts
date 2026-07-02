@@ -30,6 +30,66 @@ const adminOrSelfMiddleware = (req: AuthenticatedRequest, res: Response, next: a
   return next(new AppError('Access denied.', 403));
 };
 
+// GET /users/me — current user's profile (any role)
+router.get('/me', authMiddleware, async (req: AuthenticatedRequest, res: Response, next) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user!.id },
+      select: { id: true, email: true, name: true, role: true, status: true, dashboardUrl: true, category: true, collateral: true, createdAt: true },
+    });
+    if (!user) return next(new AppError('User not found', 404));
+    res.json({ status: 'success', data: { user } });
+  } catch (error) { next(error); }
+});
+
+// PUT /users/:id/collateral — admin sets a customer's collateral/deposit amount
+router.put('/:id/collateral', authMiddleware, adminMiddleware, async (req: AuthenticatedRequest, res: Response, next) => {
+  try {
+    const { collateral } = z.object({ collateral: z.number().min(0) }).parse(req.body);
+    const user = await prisma.user.update({
+      where: { id: req.params.id },
+      data: { collateral },
+      select: { id: true, name: true, email: true, collateral: true },
+    });
+    res.json({ status: 'success', data: { user } });
+  } catch (error) { next(error); }
+});
+
+// GET /users/customer-financials — aggregate collateral vs order totals (admin)
+router.get('/customer-financials', authMiddleware, adminMiddleware, async (_req: AuthenticatedRequest, res: Response, next) => {
+  try {
+    const customers = await prisma.user.findMany({
+      where: { role: 'customer' },
+      select: {
+        id: true, name: true, email: true, collateral: true,
+        orders: {
+          select: {
+            items: {
+              where: { status: { in: ['accepted', 'completed'] } },
+              select: { totalPrice: true },
+            },
+          },
+        },
+      },
+    });
+
+    let totalCollateral = 0;
+    let youWillReceive = 0; // customers owe beyond collateral (additional collection)
+    let youWillPay = 0;     // excess collateral to return to customers
+
+    const breakdown = customers.map((c) => {
+      const orderTotal = c.orders.reduce((s, o) => s + o.items.reduce((ss, i) => ss + i.totalPrice, 0), 0);
+      totalCollateral += c.collateral;
+      const balance = c.collateral - orderTotal; // positive = excess collateral; negative = customer owes more
+      if (balance >= 0) youWillPay += balance;
+      else youWillReceive += Math.abs(balance);
+      return { id: c.id, name: c.name, email: c.email, collateral: c.collateral, orderTotal, balance };
+    });
+
+    res.json({ status: 'success', data: { totalCollateral, youWillReceive, youWillPay, customers: breakdown } });
+  } catch (error) { next(error); }
+});
+
 // GET /users — list all users (admin)
 router.get('/', authMiddleware, adminMiddleware, async (req: AuthenticatedRequest, res: Response, next) => {
   try {
@@ -53,7 +113,7 @@ router.get('/', authMiddleware, adminMiddleware, async (req: AuthenticatedReques
         skip: (page - 1) * limit,
         take: limit,
         orderBy: { createdAt: 'desc' },
-        select: { id: true, email: true, name: true, role: true, status: true, dashboardUrl: true, category: true, createdAt: true },
+        select: { id: true, email: true, name: true, role: true, status: true, dashboardUrl: true, category: true, collateral: true, createdAt: true },
       }),
       prisma.user.count({ where }),
     ]);

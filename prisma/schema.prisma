@@ -68,6 +68,7 @@ model User {
   dashboardUrl String
   status       UserStatus     @default(active)
   category     VendorCategory?
+  collateral   Float          @default(0)
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
@@ -192,4 +193,13 @@ model VendorProduct {
 
   @@unique([vendorId, productName])
   @@map("vendor_products")
+}
+
+model ProductPriceOverride {
+  id           String   @id @default(cuid())
+  productName  String   @unique
+  pricePerUnit Float
+  updatedAt    DateTime @updatedAt
+
+  @@map("product_price_overrides")
 }

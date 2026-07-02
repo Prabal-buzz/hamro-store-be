@@ -549,14 +549,6 @@ export type EnumVendorCategoryFieldUpdateOperationsInput = {
   set?: $Enums.VendorCategory
 }
 
-export type FloatFieldUpdateOperationsInput = {
-  set?: number
-  increment?: number
-  decrement?: number
-  multiply?: number
-  divide?: number
-}
-
 export type EnumOrderStatusFieldUpdateOperationsInput = {
   set?: $Enums.OrderStatus
 }

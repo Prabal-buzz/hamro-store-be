@@ -85,6 +85,7 @@ export const UserScalarFieldEnum = {
   dashboardUrl: 'dashboardUrl',
   status: 'status',
   category: 'category',
+  collateral: 'collateral',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
