@@ -90,38 +90,40 @@ function imageForCommodity(name: string, category: VendorCategory): string {
   return CATEGORY_FALLBACK[category] ?? 'https://placehold.co/120x120/94a3b8/white?text=ITEM';
 }
 
+const today = new Date().toISOString().slice(0, 10);
+
 // ─── Fallback Vegetables & Fruits (used when Kalimati API is unavailable) ─────
 const VEG_FALLBACK_PRICES: MarketPrice[] = [
-  { id: 'fb-1',  name: 'Tomato',        unit: 'KG', minPrice: 30,  maxPrice: 60,  avgPrice: 45,  category: 'Vegetables and Fruits', imageUrl: imageForCommodity('tomato', 'Vegetables and Fruits'),      source: 'seed' },
-  { id: 'fb-2',  name: 'Potato',        unit: 'KG', minPrice: 25,  maxPrice: 40,  avgPrice: 32,  category: 'Vegetables and Fruits', imageUrl: imageForCommodity('potato', 'Vegetables and Fruits'),      source: 'seed' },
-  { id: 'fb-3',  name: 'Onion',         unit: 'KG', minPrice: 30,  maxPrice: 60,  avgPrice: 45,  category: 'Vegetables and Fruits', imageUrl: imageForCommodity('onion', 'Vegetables and Fruits'),       source: 'seed' },
-  { id: 'fb-4',  name: 'Cauliflower',   unit: 'KG', minPrice: 20,  maxPrice: 40,  avgPrice: 30,  category: 'Vegetables and Fruits', imageUrl: imageForCommodity('cauliflower', 'Vegetables and Fruits'), source: 'seed' },
-  { id: 'fb-5',  name: 'Cabbage',       unit: 'KG', minPrice: 15,  maxPrice: 30,  avgPrice: 22,  category: 'Vegetables and Fruits', imageUrl: imageForCommodity('cabbage', 'Vegetables and Fruits'),     source: 'seed' },
-  { id: 'fb-6',  name: 'Carrot',        unit: 'KG', minPrice: 25,  maxPrice: 50,  avgPrice: 38,  category: 'Vegetables and Fruits', imageUrl: imageForCommodity('carrot', 'Vegetables and Fruits'),      source: 'seed' },
-  { id: 'fb-7',  name: 'Brinjal',       unit: 'KG', minPrice: 20,  maxPrice: 45,  avgPrice: 32,  category: 'Vegetables and Fruits', imageUrl: imageForCommodity('brinjal', 'Vegetables and Fruits'),     source: 'seed' },
-  { id: 'fb-8',  name: 'Cucumber',      unit: 'KG', minPrice: 15,  maxPrice: 30,  avgPrice: 22,  category: 'Vegetables and Fruits', imageUrl: imageForCommodity('cucumber', 'Vegetables and Fruits'),    source: 'seed' },
-  { id: 'fb-9',  name: 'Spinach',       unit: 'KG', minPrice: 20,  maxPrice: 40,  avgPrice: 30,  category: 'Vegetables and Fruits', imageUrl: imageForCommodity('spinach', 'Vegetables and Fruits'),     source: 'seed' },
-  { id: 'fb-10', name: 'Green Chilli',  unit: 'KG', minPrice: 40,  maxPrice: 80,  avgPrice: 60,  category: 'Vegetables and Fruits', imageUrl: imageForCommodity('chilli', 'Vegetables and Fruits'),      source: 'seed' },
-  { id: 'fb-11', name: 'Capsicum',      unit: 'KG', minPrice: 40,  maxPrice: 80,  avgPrice: 60,  category: 'Vegetables and Fruits', imageUrl: imageForCommodity('capsicum', 'Vegetables and Fruits'),    source: 'seed' },
-  { id: 'fb-12', name: 'Bitter Gourd',  unit: 'KG', minPrice: 25,  maxPrice: 50,  avgPrice: 37,  category: 'Vegetables and Fruits', imageUrl: imageForCommodity('bitter', 'Vegetables and Fruits'),      source: 'seed' },
-  { id: 'fb-13', name: 'Pumpkin',       unit: 'KG', minPrice: 10,  maxPrice: 25,  avgPrice: 18,  category: 'Vegetables and Fruits', imageUrl: imageForCommodity('pumpkin', 'Vegetables and Fruits'),     source: 'seed' },
-  { id: 'fb-14', name: 'Radish',        unit: 'KG', minPrice: 10,  maxPrice: 20,  avgPrice: 15,  category: 'Vegetables and Fruits', imageUrl: imageForCommodity('radish', 'Vegetables and Fruits'),      source: 'seed' },
-  { id: 'fb-15', name: 'Mushroom',      unit: 'KG', minPrice: 120, maxPrice: 200, avgPrice: 160, category: 'Vegetables and Fruits', imageUrl: imageForCommodity('mushroom', 'Vegetables and Fruits'),    source: 'seed' },
-  { id: 'fb-16', name: 'Garlic',        unit: 'KG', minPrice: 80,  maxPrice: 160, avgPrice: 120, category: 'Vegetables and Fruits', imageUrl: imageForCommodity('garlic', 'Vegetables and Fruits'),      source: 'seed' },
-  { id: 'fb-17', name: 'Ginger',        unit: 'KG', minPrice: 60,  maxPrice: 120, avgPrice: 90,  category: 'Vegetables and Fruits', imageUrl: imageForCommodity('ginger', 'Vegetables and Fruits'),      source: 'seed' },
-  { id: 'fb-18', name: 'Coriander',     unit: 'KG', minPrice: 30,  maxPrice: 60,  avgPrice: 45,  category: 'Vegetables and Fruits', imageUrl: imageForCommodity('coriander', 'Vegetables and Fruits'),   source: 'seed' },
-  { id: 'fb-19', name: 'Peas',          unit: 'KG', minPrice: 40,  maxPrice: 80,  avgPrice: 60,  category: 'Vegetables and Fruits', imageUrl: imageForCommodity('pea', 'Vegetables and Fruits'),         source: 'seed' },
-  { id: 'fb-20', name: 'Banana',        unit: 'dozen', minPrice: 40, maxPrice: 80, avgPrice: 60, category: 'Vegetables and Fruits', imageUrl: imageForCommodity('banana', 'Vegetables and Fruits'),      source: 'seed' },
-  { id: 'fb-21', name: 'Apple',         unit: 'KG', minPrice: 100, maxPrice: 200, avgPrice: 150, category: 'Vegetables and Fruits', imageUrl: imageForCommodity('apple', 'Vegetables and Fruits'),       source: 'seed' },
-  { id: 'fb-22', name: 'Orange',        unit: 'KG', minPrice: 60,  maxPrice: 120, avgPrice: 90,  category: 'Vegetables and Fruits', imageUrl: imageForCommodity('orange', 'Vegetables and Fruits'),      source: 'seed' },
-  { id: 'fb-23', name: 'Mango',         unit: 'KG', minPrice: 60,  maxPrice: 120, avgPrice: 90,  category: 'Vegetables and Fruits', imageUrl: imageForCommodity('mango', 'Vegetables and Fruits'),       source: 'seed' },
-  { id: 'fb-24', name: 'Papaya',        unit: 'KG', minPrice: 30,  maxPrice: 60,  avgPrice: 45,  category: 'Vegetables and Fruits', imageUrl: imageForCommodity('papaya', 'Vegetables and Fruits'),      source: 'seed' },
-  { id: 'fb-25', name: 'Watermelon',    unit: 'KG', minPrice: 20,  maxPrice: 40,  avgPrice: 30,  category: 'Vegetables and Fruits', imageUrl: imageForCommodity('watermelon', 'Vegetables and Fruits'),  source: 'seed' },
-  { id: 'fb-26', name: 'Guava',         unit: 'KG', minPrice: 40,  maxPrice: 80,  avgPrice: 60,  category: 'Vegetables and Fruits', imageUrl: imageForCommodity('guava', 'Vegetables and Fruits'),       source: 'seed' },
-  { id: 'fb-27', name: 'Pomegranate',   unit: 'KG', minPrice: 100, maxPrice: 200, avgPrice: 150, category: 'Vegetables and Fruits', imageUrl: imageForCommodity('pomegranate', 'Vegetables and Fruits'), source: 'seed' },
-  { id: 'fb-28', name: 'Pineapple',     unit: 'KG', minPrice: 40,  maxPrice: 80,  avgPrice: 60,  category: 'Vegetables and Fruits', imageUrl: imageForCommodity('pineapple', 'Vegetables and Fruits'),   source: 'seed' },
-  { id: 'fb-29', name: 'Lemon',         unit: 'KG', minPrice: 60,  maxPrice: 120, avgPrice: 90,  category: 'Vegetables and Fruits', imageUrl: imageForCommodity('lemon', 'Vegetables and Fruits'),       source: 'seed' },
-  { id: 'fb-30', name: 'Coconut',       unit: 'piece', minPrice: 30, maxPrice: 60, avgPrice: 45, category: 'Vegetables and Fruits', imageUrl: imageForCommodity('coconut', 'Vegetables and Fruits'),     source: 'seed' },
+  { id: 'fb-1',  name: 'Tomato',        unit: 'KG', minPrice: 30,  maxPrice: 60,  avgPrice: 45,  category: 'Vegetables and Fruits', imageUrl: imageForCommodity('tomato', 'Vegetables and Fruits'),      source: 'seed', date: today },
+  { id: 'fb-2',  name: 'Potato',        unit: 'KG', minPrice: 25,  maxPrice: 40,  avgPrice: 32,  category: 'Vegetables and Fruits', imageUrl: imageForCommodity('potato', 'Vegetables and Fruits'),      source: 'seed', date: today },
+  { id: 'fb-3',  name: 'Onion',         unit: 'KG', minPrice: 30,  maxPrice: 60,  avgPrice: 45,  category: 'Vegetables and Fruits', imageUrl: imageForCommodity('onion', 'Vegetables and Fruits'),       source: 'seed', date: today },
+  { id: 'fb-4',  name: 'Cauliflower',   unit: 'KG', minPrice: 20,  maxPrice: 40,  avgPrice: 30,  category: 'Vegetables and Fruits', imageUrl: imageForCommodity('cauliflower', 'Vegetables and Fruits'), source: 'seed', date: today },
+  { id: 'fb-5',  name: 'Cabbage',       unit: 'KG', minPrice: 15,  maxPrice: 30,  avgPrice: 22,  category: 'Vegetables and Fruits', imageUrl: imageForCommodity('cabbage', 'Vegetables and Fruits'),     source: 'seed', date: today },
+  { id: 'fb-6',  name: 'Carrot',        unit: 'KG', minPrice: 25,  maxPrice: 50,  avgPrice: 38,  category: 'Vegetables and Fruits', imageUrl: imageForCommodity('carrot', 'Vegetables and Fruits'),      source: 'seed', date: today },
+  { id: 'fb-7',  name: 'Brinjal',       unit: 'KG', minPrice: 20,  maxPrice: 45,  avgPrice: 32,  category: 'Vegetables and Fruits', imageUrl: imageForCommodity('brinjal', 'Vegetables and Fruits'),     source: 'seed', date: today },
+  { id: 'fb-8',  name: 'Cucumber',      unit: 'KG', minPrice: 15,  maxPrice: 30,  avgPrice: 22,  category: 'Vegetables and Fruits', imageUrl: imageForCommodity('cucumber', 'Vegetables and Fruits'),    source: 'seed', date: today },
+  { id: 'fb-9',  name: 'Spinach',       unit: 'KG', minPrice: 20,  maxPrice: 40,  avgPrice: 30,  category: 'Vegetables and Fruits', imageUrl: imageForCommodity('spinach', 'Vegetables and Fruits'),     source: 'seed', date: today },
+  { id: 'fb-10', name: 'Green Chilli',  unit: 'KG', minPrice: 40,  maxPrice: 80,  avgPrice: 60,  category: 'Vegetables and Fruits', imageUrl: imageForCommodity('chilli', 'Vegetables and Fruits'),      source: 'seed', date: today },
+  { id: 'fb-11', name: 'Capsicum',      unit: 'KG', minPrice: 40,  maxPrice: 80,  avgPrice: 60,  category: 'Vegetables and Fruits', imageUrl: imageForCommodity('capsicum', 'Vegetables and Fruits'),    source: 'seed', date: today },
+  { id: 'fb-12', name: 'Bitter Gourd',  unit: 'KG', minPrice: 25,  maxPrice: 50,  avgPrice: 37,  category: 'Vegetables and Fruits', imageUrl: imageForCommodity('bitter', 'Vegetables and Fruits'),      source: 'seed', date: today },
+  { id: 'fb-13', name: 'Pumpkin',       unit: 'KG', minPrice: 10,  maxPrice: 25,  avgPrice: 18,  category: 'Vegetables and Fruits', imageUrl: imageForCommodity('pumpkin', 'Vegetables and Fruits'),     source: 'seed', date: today },
+  { id: 'fb-14', name: 'Radish',        unit: 'KG', minPrice: 10,  maxPrice: 20,  avgPrice: 15,  category: 'Vegetables and Fruits', imageUrl: imageForCommodity('radish', 'Vegetables and Fruits'),      source: 'seed', date: today },
+  { id: 'fb-15', name: 'Mushroom',      unit: 'KG', minPrice: 120, maxPrice: 200, avgPrice: 160, category: 'Vegetables and Fruits', imageUrl: imageForCommodity('mushroom', 'Vegetables and Fruits'),    source: 'seed', date: today },
+  { id: 'fb-16', name: 'Garlic',        unit: 'KG', minPrice: 80,  maxPrice: 160, avgPrice: 120, category: 'Vegetables and Fruits', imageUrl: imageForCommodity('garlic', 'Vegetables and Fruits'),      source: 'seed', date: today },
+  { id: 'fb-17', name: 'Ginger',        unit: 'KG', minPrice: 60,  maxPrice: 120, avgPrice: 90,  category: 'Vegetables and Fruits', imageUrl: imageForCommodity('ginger', 'Vegetables and Fruits'),      source: 'seed', date: today },
+  { id: 'fb-18', name: 'Coriander',     unit: 'KG', minPrice: 30,  maxPrice: 60,  avgPrice: 45,  category: 'Vegetables and Fruits', imageUrl: imageForCommodity('coriander', 'Vegetables and Fruits'),   source: 'seed', date: today },
+  { id: 'fb-19', name: 'Peas',          unit: 'KG', minPrice: 40,  maxPrice: 80,  avgPrice: 60,  category: 'Vegetables and Fruits', imageUrl: imageForCommodity('pea', 'Vegetables and Fruits'),         source: 'seed', date: today },
+  { id: 'fb-20', name: 'Banana',        unit: 'dozen', minPrice: 40, maxPrice: 80, avgPrice: 60, category: 'Vegetables and Fruits', imageUrl: imageForCommodity('banana', 'Vegetables and Fruits'),      source: 'seed', date: today },
+  { id: 'fb-21', name: 'Apple',         unit: 'KG', minPrice: 100, maxPrice: 200, avgPrice: 150, category: 'Vegetables and Fruits', imageUrl: imageForCommodity('apple', 'Vegetables and Fruits'),       source: 'seed', date: today },
+  { id: 'fb-22', name: 'Orange',        unit: 'KG', minPrice: 60,  maxPrice: 120, avgPrice: 90,  category: 'Vegetables and Fruits', imageUrl: imageForCommodity('orange', 'Vegetables and Fruits'),      source: 'seed', date: today },
+  { id: 'fb-23', name: 'Mango',         unit: 'KG', minPrice: 60,  maxPrice: 120, avgPrice: 90,  category: 'Vegetables and Fruits', imageUrl: imageForCommodity('mango', 'Vegetables and Fruits'),       source: 'seed', date: today },
+  { id: 'fb-24', name: 'Papaya',        unit: 'KG', minPrice: 30,  maxPrice: 60,  avgPrice: 45,  category: 'Vegetables and Fruits', imageUrl: imageForCommodity('papaya', 'Vegetables and Fruits'),      source: 'seed', date: today },
+  { id: 'fb-25', name: 'Watermelon',    unit: 'KG', minPrice: 20,  maxPrice: 40,  avgPrice: 30,  category: 'Vegetables and Fruits', imageUrl: imageForCommodity('watermelon', 'Vegetables and Fruits'),  source: 'seed', date: today },
+  { id: 'fb-26', name: 'Guava',         unit: 'KG', minPrice: 40,  maxPrice: 80,  avgPrice: 60,  category: 'Vegetables and Fruits', imageUrl: imageForCommodity('guava', 'Vegetables and Fruits'),       source: 'seed', date: today },
+  { id: 'fb-27', name: 'Pomegranate',   unit: 'KG', minPrice: 100, maxPrice: 200, avgPrice: 150, category: 'Vegetables and Fruits', imageUrl: imageForCommodity('pomegranate', 'Vegetables and Fruits'), source: 'seed', date: today },
+  { id: 'fb-28', name: 'Pineapple',     unit: 'KG', minPrice: 40,  maxPrice: 80,  avgPrice: 60,  category: 'Vegetables and Fruits', imageUrl: imageForCommodity('pineapple', 'Vegetables and Fruits'),   source: 'seed', date: today },
+  { id: 'fb-29', name: 'Lemon',         unit: 'KG', minPrice: 60,  maxPrice: 120, avgPrice: 90,  category: 'Vegetables and Fruits', imageUrl: imageForCommodity('lemon', 'Vegetables and Fruits'),       source: 'seed', date: today },
+  { id: 'fb-30', name: 'Coconut',       unit: 'piece', minPrice: 30, maxPrice: 60, avgPrice: 45, category: 'Vegetables and Fruits', imageUrl: imageForCommodity('coconut', 'Vegetables and Fruits'),     source: 'seed', date: today },
 ];
 
 async function fetchKalimatiPrices(): Promise<MarketPrice[]> {
@@ -177,7 +179,6 @@ async function fetchKalimatiPrices(): Promise<MarketPrice[]> {
 
 // ─── Seed data — Nepal market reference rates ─────────────────────────────────
 
-const today = new Date().toISOString().slice(0, 10);
 
 const NON_VEG_PRICES: MarketPrice[] = [
   { id: 'nv-1',  name: 'Buffalo Meat',          unit: 'KG',    minPrice: 420,  maxPrice: 500,  avgPrice: 460,  category: 'Non Veg', source: 'seed', date: today, imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Beef_cuts.jpg/120px-Beef_cuts.jpg' },
