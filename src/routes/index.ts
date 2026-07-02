@@ -7,6 +7,8 @@ import transactionsRouter from './transactions.route.js';
 import marketPricesRouter from './market-prices.route.js';
 import cartRouter from './cart.route.js';
 import productsRouter from './products.route.js';
+import customRequestsRouter from './custom-requests.route.js';
+import servicesRouter from './services.route.js';
 
 const apiRouter = Router();
 
@@ -19,5 +21,7 @@ apiRouter.use('/transactions', transactionsRouter);
 apiRouter.use('/market-prices', marketPricesRouter);
 apiRouter.use('/cart', cartRouter);
 apiRouter.use('/products', productsRouter);
+apiRouter.use('/custom-requests', customRequestsRouter);
+apiRouter.use('/services', servicesRouter);
 
 export default apiRouter;

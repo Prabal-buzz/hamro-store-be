@@ -37,6 +37,20 @@ export async function createOrder(data: {
   });
 }
 
+/** Cancel a customer order — only allowed when status is 'pending'. Rejects all child items. */
+export async function cancelOrder(orderId: string, customerId: string): Promise<{ success: true } | { success: false; message: string }> {
+  const order = await prisma.order.findUnique({ where: { id: orderId } });
+  if (!order) return { success: false, message: 'Order not found' };
+  if (order.customerId !== customerId) return { success: false, message: 'Not your order' };
+  if (order.status !== 'pending') return { success: false, message: 'Only pending orders can be cancelled' };
+
+  await prisma.$transaction(async (tx: any) => {
+    await tx.orderItem.updateMany({ where: { orderId }, data: { status: 'rejected' } });
+    await tx.order.update({ where: { id: orderId }, data: { status: 'cancelled', fulfilledQuantity: 0 } });
+  });
+  return { success: true };
+}
+
 // ─── Order Items ──────────────────────────────────────────────────────────────
 
 export async function getAllOrderItems() {
@@ -452,6 +466,51 @@ export async function increaseGroupedProductQuantity(data: {
 
   if (!created.length) return { success: false, message: 'No remaining demand for this product' };
   return { success: true, items: created, addedQty: data.additionalQuantity - rem };
+}
+
+/** Cancel all of this vendor's supply commitments for a product (sets items to rejected, recomputes orders). */
+export async function cancelGroupedProduct(data: {
+  vendorId: string;
+  productName: string;
+}): Promise<{ success: true; cancelledCount: number } | { success: false; message: string }> {
+  // Find all non-completed items for this vendor+product
+  const items = await prisma.orderItem.findMany({
+    where: { vendorId: data.vendorId, status: { in: ['accepted'] } },
+    include: { order: true },
+  });
+  const toCancel = items.filter((i: any) => i.order?.productName === data.productName);
+  if (!toCancel.length) return { success: false, message: 'No active supply commitments found for this product' };
+
+  // Reject each item and recompute the parent order's fulfilled qty + status
+  const affectedOrderIds = new Set<string>(toCancel.map((i: any) => i.orderId));
+
+  await prisma.$transaction(async (tx: any) => {
+    // Set all items to rejected
+    await tx.orderItem.updateMany({
+      where: { id: { in: toCancel.map((i: any) => i.id) } },
+      data: { status: 'rejected' },
+    });
+
+    // Recompute each affected order
+    for (const orderId of affectedOrderIds) {
+      const accepted = await tx.orderItem.aggregate({
+        where: { orderId, status: 'accepted' },
+        _sum: { quantity: true },
+      });
+      const fulfilled = accepted._sum.quantity ?? 0;
+      const order = await tx.order.findUniqueOrThrow({ where: { id: orderId } });
+      const newStatus =
+        fulfilled >= order.totalQuantity ? 'completed'
+        : fulfilled > 0 ? 'partial'
+        : 'pending';
+      await tx.order.update({
+        where: { id: orderId },
+        data: { fulfilledQuantity: fulfilled, status: newStatus },
+      });
+    }
+  });
+
+  return { success: true, cancelledCount: toCancel.length };
 }
 
 /** All order items enriched with order, customer and vendor info — for admin sales. */

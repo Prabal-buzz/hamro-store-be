@@ -203,3 +203,16 @@ model ProductPriceOverride {
 
   @@map("product_price_overrides")
 }
+
+model VendorPayment {
+  id         String   @id @default(cuid())
+  vendorId   String
+  amount     Float
+  method     String   @default("cash")
+  note       String?
+  paidAt     DateTime @default(now())
+  recordedBy String?
+  createdAt  DateTime @default(now())
+
+  @@map("vendor_payments")
+}
